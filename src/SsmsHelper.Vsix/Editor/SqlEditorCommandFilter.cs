@@ -42,6 +42,25 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
+        // One Ctrl+Z after "pick table from IntelliSense + INSERT expansion" undoes both edits and reopens the
+        // list for the partial name, since the user most likely picked the wrong table.
+        if (pguidCmdGroup == VSConstants.GUID_VSStandardCommandSet97 && nCmdID == (uint)VSConstants.VSStd97CmdID.Undo &&
+            SafeInvoke(Inserts.TakePairedUndo) && Next is not null)
+        {
+            var undone = Next.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+            if (ErrorHandler.Succeeded(undone))
+            {
+                undone = Next.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+            }
+
+            if (ErrorHandler.Succeeded(undone))
+            {
+                SafeInvoke(ShowMemberList);
+            }
+
+            return undone;
+        }
+
         var isEditorCommand = pguidCmdGroup == VSConstants.VSStd2K;
         if (isEditorCommand)
         {
@@ -90,6 +109,18 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         return Next?.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText) ?? (int)Constants.OLECMDERR_E_NOTSUPPORTED;
+    }
+
+    /// <summary>
+    /// SSMS's own List Members (Ctrl+J). Not Complete Word (Ctrl+Space): that inserts the name by itself
+    /// when only one table matches, which would put the wrong pick straight back.
+    /// </summary>
+    private bool ShowMemberList()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var group = VSConstants.VSStd2K;
+        return Next is not null &&
+               ErrorHandler.Succeeded(Next.Exec(ref group, (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST, 0, IntPtr.Zero, IntPtr.Zero));
     }
 
     private static bool IsShiftOnly() => Keyboard.Modifiers == ModifierKeys.Shift;

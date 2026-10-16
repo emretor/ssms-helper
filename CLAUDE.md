@@ -16,6 +16,9 @@ foreign-key JOIN suggestions, and INSERT statement generation.
    git push -u origin <branch> -o merge_request.create -o merge_request.target=main -o merge_request.title="<title>" -o merge_request.remove_source_branch
    ```
    The user reviews and merges. Do not merge it yourself.
+   To change an open MR's title or description (glab is not installed), push with
+   `-o merge_request.title=... -o merge_request.description=...`; push options are only sent with a ref update,
+   so add `git commit --allow-empty` first when there is nothing else to push.
    The user squash-merges, so branch history does not matter: fix mistakes and follow-up review requests with
    new commits on the same branch and push them to the open MR. No need to amend, rebase or keep commits tidy.
 4. Update the YouTrack issue: In Progress when work starts, a comment with what changed, Done only after the
@@ -123,6 +126,10 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   table (no newline, no added whitespace). Do not require a text change: committing an already fully typed name changes
   nothing. This does not depend on detecting SSMS's completion session
   (SSMS may not use the editor completion brokers). Only works once the schema is cached.
+- After such an expansion, if IntelliSense actually changed the name, `InsertHelperController` remembers the buffer
+  version. The next VSStd97 Undo at exactly that version is sent to SSMS twice, so one Ctrl+Z goes back to the
+  partial name ("Games" to "Gam"), then VSStd2K SHOWMEMBERLIST reopens SSMS's list (not COMPLETEWORD, which
+  auto-inserts a single match). Any other edit moves the version on and Undo is normal again. Redo stays two steps.
 - `SuggestionPopup` rows are neutral `SuggestionItem(Text, Description, IsItalic, Value)` so other helpers can reuse it.
 - `InsertOptions.NullForNullable` exists in Core but has no UI yet (options page is SSM-12).
 

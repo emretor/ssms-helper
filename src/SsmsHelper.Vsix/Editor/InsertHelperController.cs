@@ -19,6 +19,7 @@ internal sealed class InsertHelperController
     private readonly IWpfTextView _view;
     private readonly IntelliSenseSessions _intelliSense;
     private int _request;
+    private int? _pairedUndoVersion;
 
     public InsertHelperController(IWpfTextView view, IntelliSenseSessions intelliSense)
     {
@@ -38,10 +39,26 @@ internal sealed class InsertHelperController
         return TryExpandAtCaret(layout, reportUnknownTable: true);
     }
 
-    internal readonly record struct KeyState(int Line);
+    internal readonly record struct KeyState(int Line, int Version);
 
-    /// <summary>Caret line before Enter or Tab reaches SSMS.</summary>
-    public KeyState CaptureBeforeKey() => new(_view.Caret.Position.BufferPosition.GetContainingLine().LineNumber);
+    /// <summary>Caret line and buffer version before Enter or Tab reaches SSMS.</summary>
+    public KeyState CaptureBeforeKey()
+    {
+        var caret = _view.Caret.Position.BufferPosition;
+        return new KeyState(caret.GetContainingLine().LineNumber, caret.Snapshot.Version.VersionNumber);
+    }
+
+    /// <summary>
+    /// True once when the buffer is still exactly as an expansion that followed an IntelliSense name
+    /// completion left it. The caller then undoes twice, so one Ctrl+Z also takes back the completed name
+    /// ("Games" back to "Gam"): a wrong pick from the list is the usual reason to undo right away.
+    /// </summary>
+    public bool TakePairedUndo()
+    {
+        var paired = _pairedUndoVersion == _view.TextBuffer.CurrentSnapshot.Version.VersionNumber;
+        _pairedUndoVersion = null;
+        return paired;
+    }
 
     /// <summary>
     /// Runs after SSMS handled Enter or Tab. If the key did not start a new line or add whitespace and the
@@ -60,7 +77,12 @@ internal sealed class InsertHelperController
             return;
         }
 
-        TryExpandAtCaret(layout, reportUnknownTable: false, loadSchema: false);
+        // Pair the undo only when IntelliSense really changed the name; otherwise it left nothing to undo.
+        var completedName = caret.Snapshot.Version.VersionNumber != before.Version;
+        if (TryExpandAtCaret(layout, reportUnknownTable: false, loadSchema: false) && completedName)
+        {
+            _pairedUndoVersion = _view.TextBuffer.CurrentSnapshot.Version.VersionNumber;
+        }
     }
 
     private bool TryExpandAtCaret(InsertLayout layout, bool reportUnknownTable, bool loadSchema = true)
@@ -187,7 +209,8 @@ internal sealed class InsertHelperController
             (skipped.Count == 0 ? "." : "; skipped " + string.Join(", ", skipped.Select(s => $"{s.Name} ({s.Reason})")) + "."));
     }
 
-    // A pending load must not expand into text the user has changed since pressing Tab.
+    // A pending load must not expand into text the user has changed since pressing Tab. The paired undo
+    // needs no clearing here: TakePairedUndo compares versions, and any later edit moves the version on.
     private void OnBufferChanged(object sender, TextContentChangedEventArgs e) => _request++;
 
     private void OnClosed(object sender, EventArgs e)
