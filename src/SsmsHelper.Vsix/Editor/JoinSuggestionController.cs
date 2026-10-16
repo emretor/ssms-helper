@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using SsmsHelper.Connections;
+using SsmsHelper.Core.Editor;
 using SsmsHelper.Core.Joins;
 using Task = System.Threading.Tasks.Task;
 
@@ -38,7 +38,7 @@ internal sealed class JoinSuggestionController
     public bool IsOpen => _popup?.IsOpen == true;
 
     /// <summary>Handles navigation and commit keys while the popup is open. Returns true when consumed.</summary>
-    public bool PreprocessCommand(uint commandId)
+    public bool PreprocessCommand(EditorKey key)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (!IsOpen)
@@ -46,25 +46,24 @@ internal sealed class JoinSuggestionController
             return false;
         }
 
-        switch ((VSConstants.VSStd2KCmdID)commandId)
+        switch (JoinPopupRules.KeyWhileOpen(key))
         {
-            case VSConstants.VSStd2KCmdID.UP:
+            case PopupAction.MoveUp:
                 _popup!.MoveSelection(-1);
                 return true;
-            case VSConstants.VSStd2KCmdID.DOWN:
+            case PopupAction.MoveDown:
                 _popup!.MoveSelection(1);
                 return true;
-            case VSConstants.VSStd2KCmdID.PAGEUP:
+            case PopupAction.PageUp:
                 _popup!.MoveSelection(-SuggestionPopup.PageSize);
                 return true;
-            case VSConstants.VSStd2KCmdID.PAGEDN:
+            case PopupAction.PageDown:
                 _popup!.MoveSelection(SuggestionPopup.PageSize);
                 return true;
-            case VSConstants.VSStd2KCmdID.RETURN:
-            case VSConstants.VSStd2KCmdID.TAB:
+            case PopupAction.Commit:
                 Commit();
                 return true;
-            case VSConstants.VSStd2KCmdID.CANCEL:
+            case PopupAction.Close:
                 Dismiss();
                 return true;
             default:
@@ -73,14 +72,13 @@ internal sealed class JoinSuggestionController
     }
 
     /// <summary>Runs after SSMS handled a command: refilters an open popup or auto-opens after "ON ".</summary>
-    public void PostprocessCommand(uint commandId, char? typed)
+    public void PostprocessCommand(EditorKey key, char? typed)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var command = (VSConstants.VSStd2KCmdID)commandId;
 
         if (IsOpen)
         {
-            if (command is VSConstants.VSStd2KCmdID.TYPECHAR or VSConstants.VSStd2KCmdID.BACKSPACE or VSConstants.VSStd2KCmdID.DELETE)
+            if (JoinPopupRules.Refilters(key))
             {
                 Refilter();
                 if (IsOpen)
@@ -93,13 +91,12 @@ internal sealed class JoinSuggestionController
             return;
         }
 
-        if (command == VSConstants.VSStd2KCmdID.TYPECHAR && typed == ' ' && MayEndJoinHeader())
+        if (key == EditorKey.TypeChar && typed == ' ' && MayEndJoinHeader())
         {
             var context = Analyze();
-            if (context is { Kind: JoinContextKind.AfterOn, FilterText.Length: 0 } ||
-                context is { Kind: JoinContextKind.AfterJoinTarget, Target.AliasText: not null })
+            if (JoinPopupRules.ShouldAutoOpen(context))
             {
-                Show(context, manual: false);
+                Show(context!, manual: false);
             }
         }
     }
@@ -118,10 +115,7 @@ internal sealed class JoinSuggestionController
         Show(context, manual: true);
     }
 
-    /// <summary>
-    /// Cheap check on the current line before the full analysis (which scans the script from the start):
-    /// the space just typed follows the word ON, or the line contains JOIN, so it may end "JOIN table alias".
-    /// </summary>
+    /// <summary>Cheap current-line pre-check (see <see cref="JoinPopupRules.MayEndJoinHeader"/>) before the full analysis.</summary>
     private bool MayEndJoinHeader()
     {
         var caret = _view.Caret.Position.Point.GetPoint(_view.TextBuffer, PositionAffinity.Predecessor);
@@ -132,39 +126,8 @@ internal sealed class JoinSuggestionController
 
         var line = caret.Value.GetContainingLine();
         var before = caret.Value.Position - line.Start.Position;
-        if (before < 3)
-        {
-            return false;
-        }
-
-        var text = caret.Value.Snapshot.GetText(line.Start.Position, before);
-        var end = text.Length - 1; // the typed space
-        return EndsWithWord(text, end, "ON") || ContainsWord(text, "JOIN");
+        return before >= 3 && JoinPopupRules.MayEndJoinHeader(caret.Value.Snapshot.GetText(line.Start.Position, before));
     }
-
-    private static bool EndsWithWord(string text, int end, string word)
-    {
-        var start = end - word.Length;
-        return start >= 0 &&
-               string.Compare(text, start, word, 0, word.Length, StringComparison.OrdinalIgnoreCase) == 0 &&
-               (start == 0 || !IsWordChar(text[start - 1]));
-    }
-
-    private static bool ContainsWord(string text, string word)
-    {
-        for (var i = text.IndexOf(word, StringComparison.OrdinalIgnoreCase); i >= 0; i = text.IndexOf(word, i + 1, StringComparison.OrdinalIgnoreCase))
-        {
-            var after = i + word.Length;
-            if ((i == 0 || !IsWordChar(text[i - 1])) && (after == text.Length || !IsWordChar(text[after])))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '_' or '@' or '#' or '$';
 
     private JoinContext? Analyze()
     {
@@ -258,7 +221,7 @@ internal sealed class JoinSuggestionController
         ThreadHelper.ThrowIfNotOnUIThread();
         _context = context;
         _suggestions = suggestions;
-        var visible = Filter(suggestions, context.FilterText);
+        var visible = JoinPopupRules.Filter(suggestions, context.FilterText);
         if (visible.Count == 0)
         {
             return;
@@ -288,14 +251,14 @@ internal sealed class JoinSuggestionController
     private void Refilter()
     {
         var current = Analyze();
-        if (current is null || _context is null || current.Kind != _context.Kind || current.ReplaceStart != _context.ReplaceStart)
+        if (!JoinPopupRules.KeepsOpen(current, _context))
         {
             Dismiss();
             return;
         }
 
-        _context = current;
-        var visible = Filter(_suggestions, current.FilterText);
+        _context = current!;
+        var visible = JoinPopupRules.Filter(_suggestions, _context.FilterText);
         if (visible.Count == 0)
         {
             Dismiss();
@@ -307,11 +270,6 @@ internal sealed class JoinSuggestionController
 
     private static IReadOnlyList<SuggestionItem> ToItems(IReadOnlyList<JoinSuggestion> suggestions) =>
         suggestions.Select(s => new SuggestionItem(s.Condition, s.Description, s.Kind == JoinSuggestionKind.NameMatch, s)).ToList();
-
-    private static IReadOnlyList<JoinSuggestion> Filter(IReadOnlyList<JoinSuggestion> suggestions, string filter) =>
-        filter.Length == 0
-            ? suggestions
-            : suggestions.Where(s => s.Condition.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
 
     private void Commit()
     {
