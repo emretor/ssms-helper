@@ -58,11 +58,14 @@ internal sealed class SqlEditorViewListener : IVsTextViewCreationListener
                 ActivityLog.TryLogInformation(Log.Source, $"Attached to SQL editor: {description}");
             }
 
-            var filter = new SnippetCommandFilter(view, () => Expander, CompletionBroker, AsyncCompletionBroker);
+            var intelliSense = new IntelliSenseSessions(CompletionBroker, AsyncCompletionBroker);
+            var joins = new JoinSuggestionController(view, intelliSense);
+            var filter = new SqlEditorCommandFilter(view, () => Expander, intelliSense, joins);
             if (textViewAdapter.AddCommandFilter(filter, out var next) == Microsoft.VisualStudio.VSConstants.S_OK)
             {
                 filter.Next = next;
-                view.Properties[typeof(SnippetCommandFilter)] = filter;
+                view.Properties[typeof(SqlEditorCommandFilter)] = filter;
+                view.Properties[typeof(JoinSuggestionController)] = joins;
             }
         }
         catch (Exception ex)

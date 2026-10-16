@@ -8,8 +8,18 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 
 Status: early. Snippet expansion works on Tab (`ssf`, `st100`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`).
 Snippets do not expand inside comments, strings or delimited identifiers.
-Tools > **SSMS Helper: Refresh Schema** loads tables, columns and foreign keys for the active query
-window's database and reports the counts in the status bar. JOIN and INSERT helpers are not started yet.
+**JOIN helper**: type `JOIN dbo.Orders o ON ` (with the space) and a list of join conditions from foreign
+keys appears. Up/Down to choose, Enter or Tab to insert, Esc to close, keep typing to filter. Tables without a
+foreign key get name-based guesses (shown in italics). Tools > **SSMS Helper: Suggest Join** opens the list on
+demand, also directly after `JOIN table alias`; bind it to a shortcut under Tools > Options > Environment >
+Keyboard by searching for `SSMSHelperSuggestJoin`.
+
+Tools > **SSMS Helper: Refresh Schema** reloads tables, columns and foreign keys for the active query
+window's database. Schemas are otherwise loaded on first use and refreshed after 30 minutes.
+
+`samples/ShopDemo.sql` creates a small `SsmsHelperDemo` database for trying the helpers.
+
+The INSERT helper is not started yet.
 Work is tracked in YouTrack project `SSM`.
 
 > Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS

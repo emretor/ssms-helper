@@ -74,6 +74,20 @@ and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoT
 - `SchemaLoader.Query` must stay compatible with SQL Server 2012+ and Azure SQL. Avoid newer catalog columns
   directly; use `COLUMNPROPERTY` or similar functions that return NULL on older versions.
 
+## JOIN helper notes
+
+- Context detection (`JoinContextAnalyzer`) uses the Core tokenizer, not ScriptDom: the statement at the caret is
+  incomplete by definition and ScriptDom rejects it. It scopes to the current statement (`;`/`GO`), the innermost
+  open parenthesis, and the last SELECT/UPDATE/DELETE at that level.
+- `SqlEditorCommandFilter` order: open popup gets first claim on Up/Down/PageUp/PageDown/Enter/Tab/Esc, then Tab
+  snippet expansion, then the key goes to SSMS; after SSMS handles it, the popup refilters or auto-opens after "ON ".
+- The popup never takes focus (popup, list and items are non-focusable). If it ever steals focus, the view's
+  LostAggregateFocus closes it before a click lands.
+- Fire-and-forget async work from editor callbacks goes through `Background.Run`, the one place VSSDK007 is
+  suppressed.
+- `samples/ShopDemo.sql` creates `SsmsHelperDemo` with every relationship shape the helper handles; use it for
+  manual testing in SSMS.
+
 ## Gotchas
 
 - Git ignores case on Windows: an ignore pattern like `*.vsix` also matches the `SsmsHelper.Vsix` folder.

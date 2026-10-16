@@ -1,6 +1,6 @@
 using System;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Threading;
+using Task = System.Threading.Tasks.Task;
 
 namespace SsmsHelper;
 
@@ -19,9 +19,9 @@ internal static class Log
 
     private static void Write(string message, bool error)
     {
-        // Fire-and-forget is intended: logging must never block the caller, and the Try* methods do not throw.
+        // Not Background.Run: that logs its own failures here, which could recurse.
 #pragma warning disable VSSDK007
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (error)
@@ -32,7 +32,7 @@ internal static class Log
             {
                 ActivityLog.TryLogInformation(Source, message);
             }
-        }).Task.Forget();
+        });
 #pragma warning restore VSSDK007
     }
 }
