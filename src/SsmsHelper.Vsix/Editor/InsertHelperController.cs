@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using SsmsHelper.Connections;
+using SsmsHelper.Core.Editor;
 using SsmsHelper.Core.Inserts;
 using SsmsHelper.Core.Metadata;
 using Task = System.Threading.Tasks.Task;
@@ -55,7 +56,7 @@ internal sealed class InsertHelperController
     /// </summary>
     public bool TakePairedUndo()
     {
-        var paired = _pairedUndoVersion == _view.TextBuffer.CurrentSnapshot.Version.VersionNumber;
+        var paired = InsertKeyRules.IsPairedUndo(_pairedUndoVersion, _view.TextBuffer.CurrentSnapshot.Version.VersionNumber);
         _pairedUndoVersion = null;
         return paired;
     }
@@ -70,16 +71,15 @@ internal sealed class InsertHelperController
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var caret = _view.Caret.Position.BufferPosition;
-        if (caret.GetContainingLine().LineNumber != before.Line ||
-            caret.Position == 0 ||
-            char.IsWhiteSpace((caret - 1).GetChar()))
+        char? charBefore = caret.Position == 0 ? null : (caret - 1).GetChar();
+        if (!InsertKeyRules.LooksLikeCompletionCommit(before.Line, caret.GetContainingLine().LineNumber, charBefore))
         {
             return;
         }
 
-        // Pair the undo only when IntelliSense really changed the name; otherwise it left nothing to undo.
-        var completedName = caret.Snapshot.Version.VersionNumber != before.Version;
-        if (TryExpandAtCaret(layout, reportUnknownTable: false, loadSchema: false) && completedName)
+        var versionAfterKey = caret.Snapshot.Version.VersionNumber;
+        var expanded = TryExpandAtCaret(layout, reportUnknownTable: false, loadSchema: false);
+        if (InsertKeyRules.ShouldPairUndo(expanded, before.Version, versionAfterKey))
         {
             _pairedUndoVersion = _view.TextBuffer.CurrentSnapshot.Version.VersionNumber;
         }
@@ -88,7 +88,7 @@ internal sealed class InsertHelperController
     private bool TryExpandAtCaret(InsertLayout layout, bool reportUnknownTable, bool loadSchema = true)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (!_view.Selection.IsEmpty || _view.Selection.SelectedSpans.Count > 1 || _view.Caret.InVirtualSpace)
+        if (!CaretGuard.CanExpand(_view.Selection.IsEmpty, _view.Selection.SelectedSpans.Count, _view.Caret.InVirtualSpace))
         {
             return false;
         }

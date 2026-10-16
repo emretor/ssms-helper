@@ -78,6 +78,14 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 
 ## Editor integration notes
 
+- Editor decisions live in Core (`SsmsHelper.Core.Editor`) as pure functions with unit tests: `CaretGuard`,
+  `JoinPopupRules` (popup keys, refilter keys, ON/JOIN pre-check, auto-open, keep-open, filter) and `InsertKeyRules`
+  (Tab / Shift+Enter layouts, IntelliSense-commit detection, paired undo). The Vsix only maps VS commands to
+  `EditorKey` (`EditorKeys.From`), gathers inputs (line numbers, buffer versions, char before caret, modifiers) and
+  applies the result. New editor rules go into Core first, with tests; keep VS types out of Core.
+- The key order in `SqlEditorCommandFilter.Exec` (paired Undo, open JOIN popup, INSERT, snippets, then SSMS, then
+  post-processing) is still Vsix code and only covered by manual testing.
+
 - `SqlEditorViewListener` attaches to `.sql` documents or content types containing "sql"; the SSMS query editor's
   content type name is undocumented. It logs the real name to the activity log (`Ssms.exe /log`).
 - Command filters must never throw. Catch, log via `ActivityLog` with source `SsmsHelper`, and pass the key through.

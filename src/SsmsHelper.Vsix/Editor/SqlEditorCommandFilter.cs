@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using SsmsHelper.Core.Inserts;
+using SsmsHelper.Core.Editor;
 using SsmsHelper.Core.Snippets;
 
 namespace SsmsHelper.Editor;
@@ -62,28 +62,33 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         }
 
         var isEditorCommand = pguidCmdGroup == VSConstants.VSStd2K;
+        var key = isEditorCommand ? EditorKeys.From(nCmdID) : EditorKey.Other;
+
+        // Shift+Enter arrives as RETURN (Edit.BreakLine); only the modifier tells it apart.
+        var shiftOnly = key == EditorKey.Return && IsShiftOnly();
+
+        // Order matters: an open JOIN popup, then INSERT (Tab, Shift+Enter), then snippets (Tab).
         if (isEditorCommand)
         {
-            if (SafeInvoke(() => Joins.PreprocessCommand(nCmdID)))
+            if (SafeInvoke(() => Joins.PreprocessCommand(key)))
             {
                 return VSConstants.S_OK;
             }
 
-            if (nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB && (SafeInvoke(() => Inserts.TryTrigger()) || SafeInvoke(TryExpandSnippet)))
+            if (InsertKeyRules.BeforeKey(key, shiftOnly) is { } insertLayout && SafeInvoke(() => Inserts.TryTrigger(insertLayout)))
             {
                 return VSConstants.S_OK;
             }
 
-            // Shift+Enter arrives as RETURN (Edit.BreakLine); the modifier picks the compact INSERT layout.
-            if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN && IsShiftOnly() && SafeInvoke(() => Inserts.TryTrigger(InsertLayout.Compact)))
+            if (key == EditorKey.Tab && SafeInvoke(TryExpandSnippet))
             {
                 return VSConstants.S_OK;
             }
         }
 
-        var typed = isEditorCommand && nCmdID == (uint)VSConstants.VSStd2KCmdID.TYPECHAR ? GetTypedChar(pvaIn) : null;
-        var isCommitKey = isEditorCommand && nCmdID is (uint)VSConstants.VSStd2KCmdID.RETURN or (uint)VSConstants.VSStd2KCmdID.TAB;
-        var layout = nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN && IsShiftOnly() ? InsertLayout.Compact : InsertLayout.Expanded;
+        var typed = key == EditorKey.TypeChar ? GetTypedChar(pvaIn) : null;
+        var isCommitKey = InsertKeyRules.MayCommitCompletion(key);
+        var layout = InsertKeyRules.AfterKeyLayout(key, shiftOnly);
         var beforeKey = isCommitKey ? Inserts.CaptureBeforeKey() : default;
         var result = Next?.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) ?? (int)Constants.OLECMDERR_E_NOTSUPPORTED;
 
@@ -97,7 +102,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
                     Inserts.AfterKey(beforeKey, layout);
                 }
 
-                Joins.PostprocessCommand(nCmdID, typed);
+                Joins.PostprocessCommand(key, typed);
                 return true;
             });
         }
@@ -151,8 +156,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
 
     private bool TryExpandSnippet()
     {
-        // Leave Tab alone for selections (indent) and multi-caret editing.
-        if (!_view.Selection.IsEmpty || _view.Selection.SelectedSpans.Count > 1 || _view.Caret.InVirtualSpace)
+        if (!CaretGuard.CanExpand(_view.Selection.IsEmpty, _view.Selection.SelectedSpans.Count, _view.Caret.InVirtualSpace))
         {
             return false;
         }
