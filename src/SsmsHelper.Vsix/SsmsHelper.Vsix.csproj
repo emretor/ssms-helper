@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- In-process VSIX loaded by SSMS 22 (Visual Studio 2026 shell, .NET Framework 4.8 process).
+       Keep this project thin: editor hooks, connection discovery, UI. Logic goes in SsmsHelper.Core. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>SsmsHelper</RootNamespace>
+    <AssemblyName>SsmsHelper</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+
+    <!-- VSIX packaging. AutoSetup makes the VSSDK.BuildTools NuGet package import its packaging
+         targets into this SDK-style project, so no "VS extension development" workload is needed. -->
+    <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
+    <UseCodebase>true</UseCodebase>
+    <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
+    <IncludeDebugSymbolsInVSIXContainer>true</IncludeDebugSymbolsInVSIXContainer>
+    <CreateVsixContainer>true</CreateVsixContainer>
+    <!-- DeployExtension targets the Visual Studio experimental hive, not SSMS. -->
+    <DeployExtension>false</DeployExtension>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile against the VS SDK only; SSMS supplies these assemblies at runtime. -->
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- .NET Framework assemblies that SDK-style projects do not reference by default. -->
+    <Reference Include="System.Design" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SsmsHelper.Core\SsmsHelper.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="source.extension.vsixmanifest" SubType="Designer" />
+    <VSCTCompile Include="SsmsHelperPackage.vsct" ResourceName="Menus.ctmenu" />
+  </ItemGroup>
+</Project>

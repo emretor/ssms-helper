@@ -1,7 +1,6 @@
 # Build output
 bin/
 obj/
-*.vsix
 
 # Visual Studio
 .vs/
