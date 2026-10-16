@@ -30,6 +30,7 @@
   <ItemGroup>
     <!-- .NET Framework assemblies that SDK-style projects do not reference by default. -->
     <Reference Include="System.Design" />
+    <Reference Include="System.ComponentModel.Composition" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,7 +6,9 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 - **JOIN helper**: suggests `ON` conditions from foreign keys.
 - **INSERT helper**: generates the column list and typed `VALUES` / `SELECT`.
 
-Status: scaffolding. Only the package and a Tools > **SSMS Helper: About** command exist so far.
+Status: early. Snippet expansion works on Tab (`ssf`, `st100`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`).
+Snippets do not expand inside comments, strings or delimited identifiers.
+JOIN and INSERT helpers are not started yet.
 Work is tracked in YouTrack project `SSM`.
 
 > Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS
