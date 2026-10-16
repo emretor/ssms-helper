@@ -16,6 +16,8 @@ foreign-key JOIN suggestions, and INSERT statement generation.
    git push -u origin <branch> -o merge_request.create -o merge_request.target=main -o merge_request.title="<title>" -o merge_request.remove_source_branch
    ```
    The user reviews and merges. Do not merge it yourself.
+   The user squash-merges, so branch history does not matter: fix mistakes and follow-up review requests with
+   new commits on the same branch and push them to the open MR. No need to amend, rebase or keep commits tidy.
 4. Update the YouTrack issue: In Progress when work starts, a comment with what changed, Done only after the
    user has verified it in SSMS (or for Core-only work, once tests pass and the MR is merged).
 
@@ -45,6 +47,20 @@ Output: `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`. Install by clos
 The VSIX Installer will not reinstall the same version, so bump the version for every build the user should install.
 The version lives in three places that must match: `Directory.Build.props`, `source.extension.vsixmanifest`,
 and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoTests`).
+
+## Performance (always)
+
+The editor must stay as fast as SSMS without the extension. Every change to editor hooks has to keep it that way.
+
+- Per-keystroke work (TYPECHAR, BACKSPACE, caret and buffer events) must be O(1) or limited to the current line.
+  Full-script scans (`SqlLexicalContext`, tokenizers, analyzers) run only after a cheap pre-check passes or on an
+  explicit key (Tab, Enter, a menu command). See `JoinSuggestionController.MayEndJoinHeader` for the pattern.
+- Never touch the database on the UI thread or per keystroke. Metadata comes from `SchemaService.Cache.TryGet`
+  (never blocks); loads run in the background and are shared.
+- No allocations proportional to the script in hot paths beyond the one `GetText()` an explicit trigger needs.
+- When a requested feature could slow typing (more scanning, more events, DB round trips), say so to the user
+  with the expected cost before implementing it and let them decide. State the cost in MR descriptions and
+  YouTrack plans for editor features.
 
 ## Hard constraints
 
@@ -90,6 +106,25 @@ and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoT
   suppressed.
 - `samples/ShopDemo.sql` creates `SsmsHelperDemo` with every relationship shape the helper handles; use it for
   manual testing in SSMS.
+
+## INSERT helper notes
+
+- `InsertContextAnalyzer` reads tokens backwards from the caret ("INSERT [INTO] name [(cols)]" then only whitespace),
+  so earlier statements never matter. Temp tables, table variables and BULK INSERT are ignored.
+- Tab writes INSERT ... VALUES directly. There is deliberately no popup and no INSERT ... SELECT form: the user
+  mostly writes VALUES and edits it into a SELECT by hand when needed.
+- Tab order in `SqlEditorCommandFilter`: open JOIN popup, then `InsertHelperController.TryTrigger`, then snippets.
+  With a cached schema and an unknown table, Tab is passed on (it may be IntelliSense completing the name).
+  Without a cached schema, Tab is consumed while the schema loads; any edit meanwhile cancels the expansion.
+- Shift+Enter gives `InsertLayout.Compact` (one-line column list, `VALUES (...)` on the next line, no comments).
+  It arrives as VSStd2K RETURN (Edit.BreakLine); the filter checks `Keyboard.Modifiers == Shift`.
+- Picking the table from SSMS IntelliSense with Enter or Tab also expands: the filter records the caret line before
+  the key, and `InsertHelperController.AfterKey` expands when the caret stayed on the same line, right after a known
+  table (no newline, no added whitespace). Do not require a text change: committing an already fully typed name changes
+  nothing. This does not depend on detecting SSMS's completion session
+  (SSMS may not use the editor completion brokers). Only works once the schema is cached.
+- `SuggestionPopup` rows are neutral `SuggestionItem(Text, Description, IsItalic, Value)` so other helpers can reuse it.
+- `InsertOptions.NullForNullable` exists in Core but has no UI yet (options page is SSM-12).
 
 ## Gotchas
 

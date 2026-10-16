@@ -8,6 +8,11 @@
       SELECT * FROM dbo.OrderLines l JOIN dbo.OrderLineNotes n ON -- composite key
       SELECT * FROM dbo.Employees e JOIN dbo.Employees m ON      -- self reference, both directions
       SELECT * FROM dbo.Products p JOIN dbo.Reviews r ON         -- no foreign key, name-based guess
+
+    INSERT helper (press Tab at the end of the line):
+      INSERT INTO dbo.Orders                    -- skips identity OrderId and rowversion RowVersion
+      INSERT INTO dbo.OrderLines                -- skips computed LineTotal
+      INSERT INTO dbo.Customers (Name, Email)   -- values for the listed columns only
 */
 USE master;
 GO

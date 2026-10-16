@@ -1,17 +1,20 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using SsmsHelper.Core.Inserts;
 using SsmsHelper.Core.Snippets;
 
 namespace SsmsHelper.Editor;
 
 /// <summary>
-/// Sees editor commands before SSMS does. The JOIN suggestion popup gets first claim on keys while it
-/// is open; otherwise Tab expands snippets. Everything else passes through untouched.
+/// Sees editor commands before SSMS does. An open JOIN popup gets first claim on keys; otherwise
+/// Tab builds an INSERT after "INSERT INTO table" (Shift+Enter builds the compact form), then
+/// expands snippets. Everything else passes through untouched.
 /// </summary>
 internal sealed class SqlEditorCommandFilter : IOleCommandTarget
 {
@@ -19,17 +22,21 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
     private readonly Func<SnippetExpander> _expander;
     private readonly IntelliSenseSessions _intelliSense;
 
-    public SqlEditorCommandFilter(IWpfTextView view, Func<SnippetExpander> expander, IntelliSenseSessions intelliSense, JoinSuggestionController joins)
+    public SqlEditorCommandFilter(
+        IWpfTextView view, Func<SnippetExpander> expander, IntelliSenseSessions intelliSense, JoinSuggestionController joins, InsertHelperController inserts)
     {
         _view = view;
         _expander = expander;
         _intelliSense = intelliSense;
         Joins = joins;
+        Inserts = inserts;
     }
 
     internal IOleCommandTarget? Next { get; set; }
 
     internal JoinSuggestionController Joins { get; }
+
+    internal InsertHelperController Inserts { get; }
 
     public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
     {
@@ -43,19 +50,34 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
                 return VSConstants.S_OK;
             }
 
-            if (nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB && SafeInvoke(TryExpandSnippet))
+            if (nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB && (SafeInvoke(() => Inserts.TryTrigger()) || SafeInvoke(TryExpandSnippet)))
+            {
+                return VSConstants.S_OK;
+            }
+
+            // Shift+Enter arrives as RETURN (Edit.BreakLine); the modifier picks the compact INSERT layout.
+            if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN && IsShiftOnly() && SafeInvoke(() => Inserts.TryTrigger(InsertLayout.Compact)))
             {
                 return VSConstants.S_OK;
             }
         }
 
         var typed = isEditorCommand && nCmdID == (uint)VSConstants.VSStd2KCmdID.TYPECHAR ? GetTypedChar(pvaIn) : null;
+        var isCommitKey = isEditorCommand && nCmdID is (uint)VSConstants.VSStd2KCmdID.RETURN or (uint)VSConstants.VSStd2KCmdID.TAB;
+        var layout = nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN && IsShiftOnly() ? InsertLayout.Compact : InsertLayout.Expanded;
+        var beforeKey = isCommitKey ? Inserts.CaptureBeforeKey() : default;
         var result = Next?.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) ?? (int)Constants.OLECMDERR_E_NOTSUPPORTED;
 
         if (isEditorCommand && ErrorHandler.Succeeded(result))
         {
             SafeInvoke(() =>
             {
+                // Enter or Tab may have committed an IntelliSense table name after "INSERT INTO".
+                if (isCommitKey)
+                {
+                    Inserts.AfterKey(beforeKey, layout);
+                }
+
                 Joins.PostprocessCommand(nCmdID, typed);
                 return true;
             });
@@ -69,6 +91,8 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         ThreadHelper.ThrowIfNotOnUIThread();
         return Next?.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText) ?? (int)Constants.OLECMDERR_E_NOTSUPPORTED;
     }
+
+    private static bool IsShiftOnly() => Keyboard.Modifiers == ModifierKeys.Shift;
 
     private static char? GetTypedChar(IntPtr pvaIn)
     {

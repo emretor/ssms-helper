@@ -266,7 +266,7 @@ internal sealed class JoinSuggestionController
 
         _popup ??= CreatePopup();
         _intelliSense.Dismiss(_view);
-        _popup.SetItems(visible);
+        _popup.SetItems(ToItems(visible));
         if (!_popup.Show(Anchor(context)))
         {
             Dismiss();
@@ -302,8 +302,11 @@ internal sealed class JoinSuggestionController
             return;
         }
 
-        _popup!.SetItems(visible);
+        _popup!.SetItems(ToItems(visible));
     }
+
+    private static IReadOnlyList<SuggestionItem> ToItems(IReadOnlyList<JoinSuggestion> suggestions) =>
+        suggestions.Select(s => new SuggestionItem(s.Condition, s.Description, s.Kind == JoinSuggestionKind.NameMatch, s)).ToList();
 
     private static IReadOnlyList<JoinSuggestion> Filter(IReadOnlyList<JoinSuggestion> suggestions, string filter) =>
         filter.Length == 0
@@ -313,7 +316,7 @@ internal sealed class JoinSuggestionController
     private void Commit()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var suggestion = _popup?.Selected;
+        var suggestion = _popup?.Selected?.Value as JoinSuggestion;
         var context = _context;
         Dismiss();
         if (suggestion is null || context is null)

@@ -20,7 +20,12 @@ window's database. Schemas are otherwise loaded on first use and refreshed after
 
 `samples/ShopDemo.sql` creates a small `SsmsHelperDemo` database for trying the helpers.
 
-The INSERT helper is not started yet.
+**INSERT helper**: type `INSERT INTO dbo.Orders` and press Tab to get the column list and a `VALUES` row.
+Picking the table from the IntelliSense list with Enter or Tab does the same. **Shift+Enter** writes the compact
+form instead: `INSERT INTO dbo.Orders (CustomerId, Status)` and `VALUES (0, '');` on the next line, without comments.
+The column list skips identity, computed, rowversion and GENERATED ALWAYS columns (the status bar lists them), and every value is a typed placeholder (`0`, `N''`, `GETDATE()`, `NEWID()`, ...) with a
+trailing comment giving the column name, type, NULL and default. If you already typed a column list,
+`INSERT INTO dbo.Orders (CustomerId, Status)` + Tab adds only the matching values.
 Work is tracked in YouTrack project `SSM`.
 
 > Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS

@@ -27,9 +27,10 @@ internal sealed class SampleSchema
 
     public SampleSchema Column(
         int objectId, int ordinal, string name, string type = "int", bool nullable = false, bool identity = false,
-        bool computed = false, byte generatedAlways = 0, string? defaultDefinition = null, string? baseType = null)
+        bool computed = false, byte generatedAlways = 0, string? defaultDefinition = null, string? baseType = null,
+        short maxLength = 4, byte precision = 10, byte scale = 0)
     {
-        Columns.Rows.Add(objectId, ordinal, name, type, baseType ?? type, (short)4, (byte)10, (byte)0,
+        Columns.Rows.Add(objectId, ordinal, name, type, baseType ?? type, maxLength, precision, scale,
             nullable, identity, computed, generatedAlways, (object?)defaultDefinition ?? DBNull.Value);
         return this;
     }
