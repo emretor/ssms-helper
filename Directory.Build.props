@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+    <Company>SsmsHelper</Company>
+    <Product>SSMS Helper</Product>
+  </PropertyGroup>
+</Project>

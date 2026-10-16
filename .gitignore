@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+*.vsix
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.rsuser
+launchSettings.local.json
+
+# Test results
+TestResults/
+*.trx

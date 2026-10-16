@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SsmsHelper.Core/SsmsHelper.Core.csproj" />
+    <Project Path="src/SsmsHelper.Vsix/SsmsHelper.Vsix.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SsmsHelper.Core.Tests/SsmsHelper.Core.Tests.csproj" />
+  </Folder>
+</Solution>

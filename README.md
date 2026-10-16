@@ -1,0 +1,56 @@
+# SSMS Helper
+
+Productivity helpers for SQL Server Management Studio 22, in the spirit of Redgate SQL Prompt:
+
+- **Snippet expansion**: `ssf` + Tab becomes `SELECT * FROM `.
+- **JOIN helper**: suggests `ON` conditions from foreign keys.
+- **INSERT helper**: generates the column list and typed `VALUES` / `SELECT`.
+
+Status: scaffolding. Only the package and a Tools > **SSMS Helper: About** command exist so far.
+Work is tracked in YouTrack project `SSM`.
+
+> Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS
+> update can break this extension. Bug reports about it should come here, not to Microsoft.
+
+## Layout
+
+| Project | Target | Purpose |
+|---|---|---|
+| `src/SsmsHelper.Core` | netstandard2.0 | All helper logic. No Visual Studio or SSMS references. |
+| `src/SsmsHelper.Vsix` | net48 | In-process VSIX: package, commands, editor hooks, UI. |
+| `tests/SsmsHelper.Core.Tests` | net10.0 | xunit v3 tests for Core. |
+
+The VSIX must target .NET Framework 4.8 because SSMS 22 runs on the Visual Studio 2026 shell,
+which is a .NET Framework process. Modern .NET cannot be loaded in-process.
+
+## Prerequisites
+
+- Visual Studio 2026 (any edition). The "Visual Studio extension development" workload is **not**
+  required; the VSSDK build tools come from NuGet.
+- .NET 10 SDK.
+- SSMS 22 to run the extension.
+
+## Build and test
+
+```powershell
+dotnet build SsmsHelper.slnx -c Release
+dotnet test --project tests/SsmsHelper.Core.Tests
+```
+
+The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`.
+
+## Install into SSMS 22
+
+1. Close SSMS.
+2. Double-click `SsmsHelper.vsix`. The VSIX Installer lists SSMS 22 as a target.
+   If the installer does not open, right-click the file and choose
+   **Open with > Microsoft Visual Studio Version Selector**.
+3. Start SSMS and open **Tools > SSMS Helper: About**.
+
+The extension is installed per user under
+`%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>`.
+
+## Uninstall
+
+Close SSMS, delete the extension's folder from the path above, and create (or touch) an empty file
+named `extensions.configurationchanged` in the `Extensions` folder so SSMS rebuilds its cache.

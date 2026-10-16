@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- All helper logic lives here. No Visual Studio or SSMS references, so it is unit-testable
+       on modern .NET and loadable inside the SSMS .NET Framework 4.8 process. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>SsmsHelper.Core</RootNamespace>
+  </PropertyGroup>
+</Project>
