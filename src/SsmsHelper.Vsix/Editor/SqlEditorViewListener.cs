@@ -13,7 +13,7 @@ using SsmsHelper.Core.Snippets;
 namespace SsmsHelper.Editor;
 
 /// <summary>
-/// Attaches <see cref="SnippetCommandFilter"/> to every SSMS query editor.
+/// Attaches <see cref="SqlEditorCommandFilter"/> to every SSMS query editor.
 /// Listens on all document text views and keeps only SQL ones, because the SSMS query
 /// editor's content type name is not documented. The first attach logs the content type to
 /// the SSMS activity log (run Ssms.exe /log) so the filter can be narrowed later.
@@ -60,12 +60,14 @@ internal sealed class SqlEditorViewListener : IVsTextViewCreationListener
 
             var intelliSense = new IntelliSenseSessions(CompletionBroker, AsyncCompletionBroker);
             var joins = new JoinSuggestionController(view, intelliSense);
-            var filter = new SqlEditorCommandFilter(view, () => Expander, intelliSense, joins);
+            var inserts = new InsertHelperController(view, intelliSense);
+            var filter = new SqlEditorCommandFilter(view, () => Expander, intelliSense, joins, inserts);
             if (textViewAdapter.AddCommandFilter(filter, out var next) == Microsoft.VisualStudio.VSConstants.S_OK)
             {
                 filter.Next = next;
                 view.Properties[typeof(SqlEditorCommandFilter)] = filter;
                 view.Properties[typeof(JoinSuggestionController)] = joins;
+                view.Properties[typeof(InsertHelperController)] = inserts;
             }
         }
         catch (Exception ex)

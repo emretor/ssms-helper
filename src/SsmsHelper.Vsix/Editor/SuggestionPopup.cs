@@ -8,9 +8,11 @@ using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
-using SsmsHelper.Core.Joins;
 
 namespace SsmsHelper.Editor;
+
+/// <summary>One row of a <see cref="SuggestionPopup"/>: the main text, a dimmed description, and the value it stands for.</summary>
+internal sealed record SuggestionItem(string Text, string Description, bool IsItalic, object Value);
 
 /// <summary>
 /// List of suggestions anchored under a buffer position. Never takes keyboard focus: the command
@@ -60,15 +62,15 @@ internal sealed class SuggestionPopup
 
     public bool IsOpen => _popup.IsOpen;
 
-    public JoinSuggestion? Selected => (_list.SelectedItem as ListBoxItem)?.Tag as JoinSuggestion;
+    public SuggestionItem? Selected => (_list.SelectedItem as ListBoxItem)?.Tag as SuggestionItem;
 
-    public void SetItems(IReadOnlyList<JoinSuggestion> suggestions)
+    public void SetItems(IReadOnlyList<SuggestionItem> items)
     {
         var (fontFamily, fontSize) = EditorFont();
         _list.Items.Clear();
-        foreach (var suggestion in suggestions)
+        foreach (var item in items)
         {
-            _list.Items.Add(new ListBoxItem { Content = Row(suggestion, fontFamily, fontSize), Tag = suggestion });
+            _list.Items.Add(new ListBoxItem { Content = Row(item, fontFamily, fontSize), Tag = item });
         }
 
         _list.SelectedIndex = 0;
@@ -117,19 +119,19 @@ internal sealed class SuggestionPopup
         return (properties?.Typeface.FontFamily ?? new FontFamily("Consolas"), properties?.FontRenderingEmSize ?? 13);
     }
 
-    private static UIElement Row(JoinSuggestion suggestion, FontFamily fontFamily, double fontSize)
+    private static UIElement Row(SuggestionItem item, FontFamily fontFamily, double fontSize)
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
         panel.Children.Add(new TextBlock
         {
-            Text = suggestion.Condition,
+            Text = item.Text,
             FontFamily = fontFamily,
             FontSize = fontSize,
-            FontStyle = suggestion.Kind == JoinSuggestionKind.NameMatch ? FontStyles.Italic : FontStyles.Normal,
+            FontStyle = item.IsItalic ? FontStyles.Italic : FontStyles.Normal,
         });
         panel.Children.Add(new TextBlock
         {
-            Text = suggestion.Description,
+            Text = item.Description,
             Margin = new Thickness(16, 0, 0, 0),
             Opacity = 0.65,
             VerticalAlignment = VerticalAlignment.Center,
