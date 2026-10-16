@@ -51,6 +51,13 @@ The VSIX Installer will not reinstall the same version, so bump the version for 
 The version lives in three places that must match: `Directory.Build.props`, `source.extension.vsixmanifest`,
 and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoTests`).
 
+## Documentation (always)
+
+`docs/FEATURES.md` is the user-facing description of every feature: triggers, keys, rules, examples, status bar
+messages and limitations. Every change that adds or changes user-visible behavior updates it in the same MR
+(new shortcut, key, message, rule, limitation, or a fixed limitation). Keep the version line at the top in sync with
+the version bump. README stays a short overview that links to it; do not duplicate feature details there.
+
 ## Performance (always)
 
 The editor must stay as fast as SSMS without the extension. Every change to editor hooks has to keep it that way.

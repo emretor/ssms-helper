@@ -2,30 +2,14 @@
 
 Productivity helpers for SQL Server Management Studio 22, in the spirit of Redgate SQL Prompt:
 
-- **Snippet expansion**: `ssf` + Tab becomes `SELECT * FROM `.
-- **JOIN helper**: suggests `ON` conditions from foreign keys.
-- **INSERT helper**: generates the column list and typed `VALUES` / `SELECT`.
+- **Snippets**: `ssf` + Tab becomes `SELECT * FROM `, plus `st100`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`.
+- **JOIN helper**: after `JOIN dbo.Orders o ` or `... ON `, a list of `ON` conditions from foreign keys.
+- **INSERT helper**: `INSERT INTO dbo.Orders` + Tab writes the column list and typed `VALUES`; Shift+Enter writes
+  the compact form.
 
-Status: early. Snippet expansion works on Tab (`ssf`, `st100`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`).
-Snippets do not expand inside comments, strings or delimited identifiers.
-**JOIN helper**: type `JOIN dbo.Orders o ` (with the space after the alias) or `JOIN dbo.Orders o ON ` and a list
-of join conditions from foreign keys appears; after the alias the inserted text includes `ON `. If the tables are not
-in the window's database, the status bar says so. Up/Down to choose, Enter or Tab to insert, Esc to close, keep typing to filter. Tables without a
-foreign key get name-based guesses (shown in italics). Tools > **SSMS Helper: Suggest Join** opens the list on
-demand, also directly after `JOIN table alias`; bind it to a shortcut under Tools > Options > Environment >
-Keyboard by searching for `SSMSHelperSuggestJoin`.
-
-Tools > **SSMS Helper: Refresh Schema** reloads tables, columns and foreign keys for the active query
-window's database. Schemas are otherwise loaded on first use and refreshed after 30 minutes.
+**See [docs/FEATURES.md](docs/FEATURES.md) for how every feature works, its keys, rules and messages.**
 
 `samples/ShopDemo.sql` creates a small `SsmsHelperDemo` database for trying the helpers.
-
-**INSERT helper**: type `INSERT INTO dbo.Orders` and press Tab to get the column list and a `VALUES` row.
-Picking the table from the IntelliSense list with Enter or Tab does the same. **Shift+Enter** writes the compact
-form instead: `INSERT INTO dbo.Orders (CustomerId, Status)` and `VALUES (0, '');` on the next line, without comments.
-The column list skips identity, computed, rowversion and GENERATED ALWAYS columns (the status bar lists them), and every value is a typed placeholder (`0`, `N''`, `GETDATE()`, `NEWID()`, ...) with a
-trailing comment giving the column name, type, NULL and default. If you already typed a column list,
-`INSERT INTO dbo.Orders (CustomerId, Status)` + Tab adds only the matching values.
 Work is tracked in YouTrack project `SSM`.
 
 > Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS
