@@ -7,7 +7,7 @@ public class ProductInfoTests
     [Fact]
     public void Version_IsTheBuildVersion_WithoutSourceLinkSuffix()
     {
-        Assert.Equal("0.5.4", ProductInfo.Version);
+        Assert.Equal("0.5.6", ProductInfo.Version);
     }
 
     [Fact]
