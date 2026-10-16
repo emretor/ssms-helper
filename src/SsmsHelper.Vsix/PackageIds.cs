@@ -11,4 +11,5 @@ internal static class PackageIds
     public static readonly Guid CommandSet = new(CommandSetGuidString);
 
     public const int AboutCommandId = 0x0100;
+    public const int RefreshSchemaCommandId = 0x0101;
 }

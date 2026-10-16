@@ -8,7 +8,8 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 
 Status: early. Snippet expansion works on Tab (`ssf`, `st100`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`).
 Snippets do not expand inside comments, strings or delimited identifiers.
-JOIN and INSERT helpers are not started yet.
+Tools > **SSMS Helper: Refresh Schema** loads tables, columns and foreign keys for the active query
+window's database and reports the counts in the status bar. JOIN and INSERT helpers are not started yet.
 Work is tracked in YouTrack project `SSM`.
 
 > Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS
@@ -30,12 +31,22 @@ which is a .NET Framework process. Modern .NET cannot be loaded in-process.
 - Visual Studio 2026 (any edition). The "Visual Studio extension development" workload is **not**
   required; the VSSDK build tools come from NuGet.
 - .NET 10 SDK.
-- SSMS 22 to run the extension.
+- SSMS 22, both to run the extension and to build it: the project references SSMS's own assemblies
+  from `C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE`.
+  Pass `-p:SsmsIdeDir=<path to Common7\IDE>` if SSMS is installed elsewhere.
 
 ## Build and test
 
 ```powershell
 dotnet build SsmsHelper.slnx -c Release
+dotnet test --project tests/SsmsHelper.Core.Tests
+```
+
+SQL Server integration tests are skipped unless `SSMSHELPER_TEST_SQLSERVER` holds a connection string with
+permission to create databases. Each run creates a uniquely named `SsmsHelperTest_*` database and drops it.
+
+```powershell
+$env:SSMSHELPER_TEST_SQLSERVER = "Server=localhost;Integrated Security=true;TrustServerCertificate=true"
 dotnet test --project tests/SsmsHelper.Core.Tests
 ```
 

@@ -34,6 +34,13 @@ dotnet build SsmsHelper.slnx -c Release
 dotnet test --project tests/SsmsHelper.Core.Tests
 ```
 
+Building the VSIX needs SSMS 22 installed: SSMS assemblies are referenced compile-only from `$(SsmsIdeDir)`
+(default `C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE`). They are Microsoft
+binaries and must never be committed. Integration tests run only when `SSMSHELPER_TEST_SQLSERVER` is set; the
+developer machine has a local SQL Server, so use
+`Server=localhost;Integrated Security=true;TrustServerCertificate=true` and run them before every MR that
+touches metadata queries.
+
 Output: `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`. Install by closing SSMS and double-clicking the file.
 The VSIX Installer will not reinstall the same version, so bump the version for every build the user should install.
 The version lives in three places that must match: `Directory.Build.props`, `source.extension.vsixmanifest`,
@@ -57,8 +64,22 @@ and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoT
 - Command filters must never throw. Catch, log via `ActivityLog` with source `SsmsHelper`, and pass the key through.
 - Multi-step edits go in a single `ITextEdit` so they are one undo step.
 
+## Connection and schema notes
+
+- `ActiveConnectionProvider` reads `ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo`
+  (UI thread only) and creates connections through SMO's `SqlConnectionInfo.CreateConnectionObject()`, so every
+  authentication type SSMS supports works. The extension always opens its own connection, never the window's.
+- `SchemaService.Cache` (Core `SchemaCache`) is the single process-wide cache. UI code calls `TryGet` (never blocks,
+  may return stale or null and starts a background load); commands may `await GetAsync`/`RefreshAsync`.
+- `SchemaLoader.Query` must stay compatible with SQL Server 2012+ and Azure SQL. Avoid newer catalog columns
+  directly; use `COLUMNPROPERTY` or similar functions that return NULL on older versions.
+
 ## Gotchas
 
 - Git ignores case on Windows: an ignore pattern like `*.vsix` also matches the `SsmsHelper.Vsix` folder.
   Build output is already excluded by `bin/` and `obj/`.
 - SDK-style net48 projects need explicit framework references (`System.Design`, `System.ComponentModel.Composition`).
+- Records need the `IsExternalInit` polyfill in every netstandard2.0/net48 project that declares them.
+- MSB3277 (assembly version conflicts) is downgraded to a message in the Vsix project: SSMS assemblies reference
+  VS 18.x while the SDK package is 17.14, and SSMS's binding redirects resolve this at runtime.
+- `LINENO` is a reserved word in T-SQL; avoid it as a column name in test DDL.

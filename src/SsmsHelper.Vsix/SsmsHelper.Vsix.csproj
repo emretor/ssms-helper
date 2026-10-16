@@ -37,6 +37,33 @@
     <ProjectReference Include="..\SsmsHelper.Core\SsmsHelper.Core.csproj" />
   </ItemGroup>
 
+  <!-- SSMS assemblies, referenced compile-only from a local SSMS 22 install so the host's copies are
+       used at runtime. Override with -p:SsmsIdeDir=... when SSMS is installed elsewhere. -->
+  <PropertyGroup>
+    <SsmsIdeDir Condition="'$(SsmsIdeDir)' == ''">$(ProgramFiles)\Microsoft SQL Server Management Studio 22\Release\Common7\IDE</SsmsIdeDir>
+    <!-- SSMS assemblies reference Visual Studio 18.x assemblies while the SDK package provides 17.14.
+         SSMS's own binding redirects unify them at runtime, so the compile-time conflicts are noise. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SsmsReference Include="SqlPackageBase" />
+    <SsmsReference Include="SqlWorkbench.Interfaces" />
+    <SsmsReference Include="ConnectionDlg" />
+    <SsmsReference Include="Microsoft.SqlServer.RegSvrEnum" />
+    <SsmsReference Include="Microsoft.SqlServer.ConnectionInfo" />
+    <SsmsReference Include="Microsoft.Data.SqlClient" />
+    <Reference Include="@(SsmsReference)">
+      <HintPath>$(SsmsIdeDir)\%(Identity).dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CheckSsmsInstall" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(SsmsIdeDir)\SqlWorkbench.Interfaces.dll')"
+           Text="SSMS 22 assemblies not found in '$(SsmsIdeDir)'. Install SSMS 22 or pass -p:SsmsIdeDir=&lt;path to Common7\IDE&gt;." />
+  </Target>
+
   <ItemGroup>
     <None Include="source.extension.vsixmanifest" SubType="Designer" />
     <VSCTCompile Include="SsmsHelperPackage.vsct" ResourceName="Menus.ctmenu" />

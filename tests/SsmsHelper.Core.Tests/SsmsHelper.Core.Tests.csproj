@@ -4,11 +4,16 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Runs on Microsoft.Testing.Platform (opted in via global.json), which .NET 10 dotnet test requires for xunit v3. -->
     <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <!-- Integration tests only. Same major/minor as the copy SSMS 22 ships (6.1.x). -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.7" />
+    <!-- Transitive from SqlClient; pinned past CVE-2026-84008 and CVE-2026-70162 (fixed in 9.0.21). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
   </ItemGroup>
 
   <ItemGroup>

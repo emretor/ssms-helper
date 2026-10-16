@@ -11,6 +11,13 @@
     </Groups>
 
     <Buttons>
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidRefreshSchema" priority="0x0090" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>SSMS Helper: Refresh Schema</ButtonText>
+        </Strings>
+      </Button>
+
       <Button guid="guidSsmsHelperCmdSet" id="cmdidAbout" priority="0x0100" type="Button">
         <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
         <Strings>
@@ -25,6 +32,7 @@
     <GuidSymbol name="guidSsmsHelperCmdSet" value="{ee6ca84e-96fa-481e-b475-d121aaccdeee}">
       <IDSymbol name="ToolsMenuGroup" value="0x1020" />
       <IDSymbol name="cmdidAbout" value="0x0100" />
+      <IDSymbol name="cmdidRefreshSchema" value="0x0101" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
