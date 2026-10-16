@@ -65,6 +65,18 @@ public static class JoinSuggester
             .ToList();
     }
 
+    /// <summary>
+    /// Named tables in the context (target first, then nearest previous) that the schema does not contain.
+    /// Derived tables and temp tables are never reported. Used to explain why no suggestions appeared,
+    /// typically because the query window is on a different database.
+    /// </summary>
+    public static IReadOnlyList<TableReference> UnresolvedTables(JoinContext context, DatabaseSchema schema, string defaultSchema = "dbo") =>
+        new[] { context.Target }
+            .Concat(context.Previous.Reverse())
+            .Where(r => !r.IsDerived && r.Name.Length > 0 && !r.Name.StartsWith("#", StringComparison.Ordinal))
+            .Where(r => schema.FindTable(r.Schema, r.Name, defaultSchema) is null)
+            .ToList();
+
     private static TableInfo? Resolve(TableReference reference, DatabaseSchema schema, string defaultSchema) =>
         reference.IsDerived || reference.Name.Length == 0 || reference.Name.StartsWith("#", StringComparison.Ordinal)
             ? null

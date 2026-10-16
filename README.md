@@ -8,8 +8,9 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 
 Status: early. Snippet expansion works on Tab (`ssf`, `st100`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`).
 Snippets do not expand inside comments, strings or delimited identifiers.
-**JOIN helper**: type `JOIN dbo.Orders o ON ` (with the space) and a list of join conditions from foreign
-keys appears. Up/Down to choose, Enter or Tab to insert, Esc to close, keep typing to filter. Tables without a
+**JOIN helper**: type `JOIN dbo.Orders o ` (with the space after the alias) or `JOIN dbo.Orders o ON ` and a list
+of join conditions from foreign keys appears; after the alias the inserted text includes `ON `. If the tables are not
+in the window's database, the status bar says so. Up/Down to choose, Enter or Tab to insert, Esc to close, keep typing to filter. Tables without a
 foreign key get name-based guesses (shown in italics). Tools > **SSMS Helper: Suggest Join** opens the list on
 demand, also directly after `JOIN table alias`; bind it to a shortcut under Tools > Options > Environment >
 Keyboard by searching for `SSMSHelperSuggestJoin`.

@@ -13,7 +13,8 @@ namespace SsmsHelper.Editor;
 
 /// <summary>
 /// Shows foreign-key based join conditions for one SQL editor. Opens automatically when the user
-/// types a space after "JOIN table [alias] ON", or on demand through Tools > SSMS Helper: Suggest Join.
+/// types a space after "JOIN table alias" (the suggestion then includes "ON ") or after "JOIN table [alias] ON",
+/// or on demand through Tools > SSMS Helper: Suggest Join.
 /// </summary>
 internal sealed class JoinSuggestionController
 {
@@ -92,10 +93,11 @@ internal sealed class JoinSuggestionController
             return;
         }
 
-        if (command == VSConstants.VSStd2KCmdID.TYPECHAR && typed == ' ' && FollowsOnKeyword())
+        if (command == VSConstants.VSStd2KCmdID.TYPECHAR && typed == ' ' && MayEndJoinHeader())
         {
             var context = Analyze();
-            if (context is { Kind: JoinContextKind.AfterOn, FilterText.Length: 0 })
+            if (context is { Kind: JoinContextKind.AfterOn, FilterText.Length: 0 } ||
+                context is { Kind: JoinContextKind.AfterJoinTarget, Target.AliasText: not null })
             {
                 Show(context, manual: false);
             }
@@ -117,10 +119,10 @@ internal sealed class JoinSuggestionController
     }
 
     /// <summary>
-    /// Cheap check on the current line that the space just typed follows the word ON, so the full
-    /// analysis (which scans the script from the start) runs only when it can succeed.
+    /// Cheap check on the current line before the full analysis (which scans the script from the start):
+    /// the space just typed follows the word ON, or the line contains JOIN, so it may end "JOIN table alias".
     /// </summary>
-    private bool FollowsOnKeyword()
+    private bool MayEndJoinHeader()
     {
         var caret = _view.Caret.Position.Point.GetPoint(_view.TextBuffer, PositionAffinity.Predecessor);
         if (caret is null)
@@ -137,9 +139,32 @@ internal sealed class JoinSuggestionController
 
         var text = caret.Value.Snapshot.GetText(line.Start.Position, before);
         var end = text.Length - 1; // the typed space
-        return string.Compare(text, end - 2, "ON", 0, 2, StringComparison.OrdinalIgnoreCase) == 0 &&
-               (end - 2 == 0 || !(char.IsLetterOrDigit(text[end - 3]) || text[end - 3] is '_' or '@' or '#' or '$'));
+        return EndsWithWord(text, end, "ON") || ContainsWord(text, "JOIN");
     }
+
+    private static bool EndsWithWord(string text, int end, string word)
+    {
+        var start = end - word.Length;
+        return start >= 0 &&
+               string.Compare(text, start, word, 0, word.Length, StringComparison.OrdinalIgnoreCase) == 0 &&
+               (start == 0 || !IsWordChar(text[start - 1]));
+    }
+
+    private static bool ContainsWord(string text, string word)
+    {
+        for (var i = text.IndexOf(word, StringComparison.OrdinalIgnoreCase); i >= 0; i = text.IndexOf(word, i + 1, StringComparison.OrdinalIgnoreCase))
+        {
+            var after = i + word.Length;
+            if ((i == 0 || !IsWordChar(text[i - 1])) && (after == text.Length || !IsWordChar(text[after])))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '_' or '@' or '#' or '$';
 
     private JoinContext? Analyze()
     {
@@ -210,7 +235,14 @@ internal sealed class JoinSuggestionController
         var suggestions = JoinSuggester.Suggest(context, schema);
         if (suggestions.Count == 0)
         {
-            if (manual)
+            // Unknown tables usually mean the window is on another database; say so even when auto-opened.
+            var missing = JoinSuggester.UnresolvedTables(context, schema);
+            if (missing.Count > 0)
+            {
+                var names = string.Join(", ", missing.Select(t => t.FullText));
+                StatusBar.Show($"{names} not found in {key.Database}. Is the query window on the right database?");
+            }
+            else if (manual)
             {
                 StatusBar.Show($"no foreign keys or matching key columns found for {context.Target.FullText}.");
             }
