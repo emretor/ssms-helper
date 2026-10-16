@@ -80,7 +80,10 @@ and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoT
   incomplete by definition and ScriptDom rejects it. It scopes to the current statement (`;`/`GO`), the innermost
   open parenthesis, and the last SELECT/UPDATE/DELETE at that level.
 - `SqlEditorCommandFilter` order: open popup gets first claim on Up/Down/PageUp/PageDown/Enter/Tab/Esc, then Tab
-  snippet expansion, then the key goes to SSMS; after SSMS handles it, the popup refilters or auto-opens after "ON ".
+  snippet expansion, then the key goes to SSMS; after SSMS handles it, the popup refilters or auto-opens on a space
+  after "JOIN table alias" or after "ON". Not after a bare "JOIN table ": the user is likely about to type an alias.
+- When no suggestions exist because tables are missing from the schema (`JoinSuggester.UnresolvedTables`), the status
+  bar says so even for auto-open; this is almost always a query window on the wrong database.
 - The popup never takes focus (popup, list and items are non-focusable). If it ever steals focus, the view's
   LostAggregateFocus closes it before a click lands.
 - Fire-and-forget async work from editor callbacks goes through `Background.Run`, the one place VSSDK007 is

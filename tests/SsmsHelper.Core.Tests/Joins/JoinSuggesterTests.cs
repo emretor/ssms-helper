@@ -145,4 +145,32 @@ public class JoinSuggesterTests
         Assert.Equal(JoinSuggestionKind.ForeignKey, suggestions[0].Kind);
         Assert.Equal("o.CustomerId = c.CustomerId", suggestions[0].Condition);
     }
+
+    [Fact]
+    public async Task AfterAlias_SuggestsTheSameConditions()
+    {
+        Assert.Equal(new[] { "o.CustomerId = c.CustomerId" }, await Conditions("FROM dbo.Customers c JOIN dbo.Orders o |"));
+    }
+
+    [Fact]
+    public async Task UnresolvedTables_ListsTargetThenNearestMissingTable()
+    {
+        var marked = "FROM Invoices i JOIN Customers c ON 1 = 1 JOIN dbo.Payments p |";
+        var caret = marked.IndexOf('|');
+        var context = JoinContextAnalyzer.Analyze(marked.Remove(caret, 1), caret)!;
+        var schema = await SampleSchema.Shop().LoadAsync();
+
+        Assert.Equal(new[] { "dbo.Payments", "Invoices" }, JoinSuggester.UnresolvedTables(context, schema).Select(t => t.FullText));
+    }
+
+    [Fact]
+    public async Task UnresolvedTables_IgnoresTempAndDerivedTables()
+    {
+        var marked = "FROM #work w JOIN (SELECT 1 AS x) d ON 1 = 1 JOIN Orders o |";
+        var caret = marked.IndexOf('|');
+        var context = JoinContextAnalyzer.Analyze(marked.Remove(caret, 1), caret)!;
+        var schema = await SampleSchema.Shop().LoadAsync();
+
+        Assert.Empty(JoinSuggester.UnresolvedTables(context, schema));
+    }
 }
