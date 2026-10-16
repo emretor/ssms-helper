@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.6.4, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.7.2, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
@@ -29,10 +29,21 @@ Type a shortcut and press **Tab**.
 | `st100` | `SELECT TOP (100) * FROM ` |
 | `scf` | `SELECT COUNT(*) FROM ` |
 | `ii` | `INSERT INTO ` |
-| `upd` | `UPDATE ` / `SET ` / `WHERE ` on three lines |
-| `df` | `DELETE FROM ` / `WHERE ` on two lines |
+| `upd` | `UPDATE`, an indented empty line for the caret, `SET `, `WHERE ` |
+| `df` | `DELETE FROM`, an indented empty line for the caret, `WHERE ` |
 | `cte` | `WITH cte AS ( ... ) SELECT * FROM cte;` with the caret inside the parentheses |
 | `bt` | `BEGIN TRANSACTION;`, an empty line for the caret, then commented `COMMIT` and `ROLLBACK` |
+
+```sql
+-- df + Tab                -- upd + Tab
+DELETE FROM                UPDATE
+    |                          |
+WHERE                      SET
+                           WHERE
+```
+
+The caret line takes a table name or a whole query; `WHERE` is always there and left empty on purpose, as a
+reminder not to run an UPDATE or DELETE on the whole table.
 
 - Shortcuts are case-insensitive (`SSF` works too).
 - The caret lands where you continue typing (after `FROM`, inside the CTE, and so on).

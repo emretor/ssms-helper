@@ -41,8 +41,9 @@ public sealed class SnippetCatalog
         new Snippet("st100", "SELECT TOP (100) * FROM $CURSOR$", "SELECT TOP (100) * FROM"),
         new Snippet("scf", "SELECT COUNT(*) FROM $CURSOR$", "SELECT COUNT(*) FROM"),
         new Snippet("ii", "INSERT INTO $CURSOR$", "INSERT INTO"),
-        new Snippet("upd", "UPDATE $CURSOR$\nSET \nWHERE ", "UPDATE ... SET ... WHERE"),
-        new Snippet("df", "DELETE FROM $CURSOR$\nWHERE ", "DELETE FROM ... WHERE"),
+        // Caret on an indented line of its own for the table name or a query; WHERE always present as a reminder.
+        new Snippet("upd", "UPDATE\n    $CURSOR$\nSET \nWHERE ", "UPDATE ... SET ... WHERE"),
+        new Snippet("df", "DELETE FROM\n    $CURSOR$\nWHERE ", "DELETE FROM ... WHERE"),
         new Snippet("cte", "WITH cte AS\n(\n    $CURSOR$\n)\nSELECT * FROM cte;", "Common table expression"),
         new Snippet("bt", "BEGIN TRANSACTION;\n\n$CURSOR$\n\n-- COMMIT TRANSACTION;\n-- ROLLBACK TRANSACTION;", "Transaction with commented COMMIT/ROLLBACK"),
     });
