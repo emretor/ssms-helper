@@ -77,13 +77,13 @@ public static class JoinSuggester
             .Where(r => schema.FindTable(r.Schema, r.Name, defaultSchema) is null)
             .ToList();
 
-    private static TableInfo? Resolve(TableReference reference, DatabaseSchema schema, string defaultSchema) =>
+    internal static TableInfo? Resolve(TableReference reference, DatabaseSchema schema, string defaultSchema) =>
         reference.IsDerived || reference.Name.Length == 0 || reference.Name.StartsWith("#", StringComparison.Ordinal)
             ? null
             : schema.FindTable(reference.Schema, reference.Name, defaultSchema);
 
     /// <summary>Alias if any; otherwise the table name, or the full name when the bare name is ambiguous.</summary>
-    private static string Qualifier(TableReference reference, IReadOnlyList<TableReference> all)
+    internal static string Qualifier(TableReference reference, IReadOnlyList<TableReference> all)
     {
         if (reference.AliasText is not null)
         {

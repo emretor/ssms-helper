@@ -6,6 +6,10 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 - **JOIN helper**: after `JOIN dbo.Orders o ` or `... ON `, a list of `ON` conditions from foreign keys.
 - **INSERT helper**: `INSERT INTO dbo.Orders` + Tab writes the column list and typed `VALUES`; Shift+Enter writes
   the compact form.
+- **Expand `*`**: Tab right after the `*` in `SELECT * FROM ...` replaces it with the column list, one per line;
+  Shift+Enter writes the compact form.
+
+Everywhere: Tab gives the default (wide) form, Shift+Enter the compact one.
 
 **See [docs/FEATURES.md](docs/FEATURES.md) for how every feature works, its keys, rules and messages.**
 

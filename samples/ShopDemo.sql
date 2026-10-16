@@ -13,6 +13,11 @@
       INSERT INTO dbo.Orders                    -- skips identity OrderId and rowversion RowVersion
       INSERT INTO dbo.OrderLines                -- skips computed LineTotal
       INSERT INTO dbo.Customers (Name, Email)   -- values for the listed columns only
+
+    SELECT * expansion (caret right after the *, press Tab):
+      SELECT * FROM dbo.Customers
+      SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId
+      SELECT c.Name, o.* FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId
 */
 USE master;
 GO

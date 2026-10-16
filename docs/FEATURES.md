@@ -1,15 +1,19 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.5.7, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.6.4, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
 - [INSERT helper](#insert-helper)
+- [Expand SELECT *](#expand-select-)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
 - [Menu commands and shortcuts](#menu-commands-and-shortcuts)
 - [Status bar messages](#status-bar-messages)
 - [Limitations](#limitations)
 - [Troubleshooting](#troubleshooting)
+
+**Key rule:** wherever a helper generates code, **Tab** gives the default (wide, one item per line) form and
+**Shift+Enter** the compact form.
 
 All helpers work in SSMS query windows (and `.sql` files). The JOIN and INSERT helpers read the database of the
 query window's current connection, so the window must be connected and on the right database (check the
@@ -130,9 +134,14 @@ Each comment gives the column name, type, `NULL` when the column is nullable, an
 ### Compact form (Shift+Enter)
 
 ```sql
-INSERT INTO dbo.Orders (CustomerId, BillingAddressId, ShippingAddressId, OrderDate, Status)
-VALUES (0, 0, 0, GETDATE(), '');
+INSERT INTO dbo.Orders
+    (CustomerId, BillingAddressId, ShippingAddressId, OrderDate, Status)
+VALUES
+    (0, 0, 0, GETDATE(), '');
 ```
+
+No comments. Long lists wrap at 120 characters, continuation lines lined up inside the parenthesis. With your own
+column list (`INSERT INTO dbo.Orders (CustomerId, Status)`), only `VALUES` and the indented row are added.
 
 ### Rules
 
@@ -170,6 +179,55 @@ an option to use `NULL` instead is planned with the options page (SSM-12).
   also takes back the pick: you are back at `INSERT INTO Gam` and the IntelliSense list opens again so you can
   pick another table. If you edited anything in between, Ctrl+Z is normal.
 - Redo (Ctrl+Y) takes two steps in that case.
+
+## Expand SELECT *
+
+Put the caret right after the `*` and press:
+
+- **Tab** (default, wide): one column per line, lined up under the first, and `FROM` on its own line:
+
+```sql
+SELECT c.CustomerId,
+       c.Name,
+       c.Email,
+       c.CreatedAt
+FROM dbo.Customers c
+```
+
+- **Shift+Enter** (compact): `SELECT` alone, the columns on the next line(s), then `FROM` on its own line. Long
+  lists wrap at 120 characters, every line indented the same way:
+
+```sql
+SELECT
+    c.CustomerId, c.Name, c.Email, c.CreatedAt
+FROM dbo.Customers c
+```
+
+Which columns you get (shown on one line here for brevity):
+
+| You type (caret after `*`) | Result |
+|---|---|
+| `SELECT * FROM dbo.Customers` | `SELECT CustomerId, Name, Email, CreatedAt FROM dbo.Customers` |
+| `SELECT * FROM dbo.Customers c` | `SELECT c.CustomerId, c.Name, c.Email, c.CreatedAt FROM dbo.Customers c` |
+| `SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON ...` | the columns of `c`, then of `o`, all qualified |
+| `SELECT c.Name, o.* FROM dbo.Customers c JOIN dbo.Orders o ON ...` | only the columns of `o` |
+
+- Works after `SELECT`, `DISTINCT`, `TOP (n)`, `TOP (n) PERCENT`, `WITH TIES` and after a comma in the SELECT list.
+  `COUNT(*)` and multiplication (`a * b`) are left alone.
+- **Every** column is listed, identity, computed and rowversion columns included (that is what `*` returns).
+- Columns are qualified when there is an alias or more than one table; a single table without alias stays
+  unqualified. Names that need it are bracketed.
+- The FROM clause is read from the same statement and query level: a `*` in a subquery uses the subquery's
+  tables, `UNION` branches are separate.
+- `DISTINCT` and `TOP (n)` stay on the `SELECT` line. After other columns (`SELECT a, o.*`) Shift+Enter continues
+  on the same line and wraps from there.
+- `FROM` is moved to its own line only when it was on the same line right after the `*`; if it is already on its
+  own line it stays where it is.
+- Nothing is expanded when a table cannot be resolved (unknown table, derived table, temp table); the status bar
+  says why. With a table variable (`FROM @rows`) Tab just inserts a tab. `alias.*` still works when only *other*
+  tables are unknown.
+- There must be a FROM clause: `SELECT *` with nothing after it yet stays as it is.
+- The caret ends after the last column. Ctrl+Z puts the `*` back.
 
 ## Schema loading and Refresh Schema
 
@@ -209,6 +267,9 @@ All messages start with `SSMS Helper:`.
 | `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database |
 | `<table> not found in <db>.` | INSERT: unknown table (also shown while IntelliSense is still completing a name) |
 | `INSERT for <table>; skipped ...` | INSERT done; lists skipped server-generated columns |
+| `expanded * to <n> column(s).` | SELECT * expansion done |
+| `cannot expand *: ...` | A table behind the `*` is unknown, derived or temporary |
+| `<x> is not a table or alias in this query.` | `x.*` does not match any table in the FROM clause |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
 | `the query window is not connected to a database.` | Suggest Join command in a disconnected window |
 | `place the caret after "JOIN table alias" or after "ON" ...` | Suggest Join command used elsewhere |

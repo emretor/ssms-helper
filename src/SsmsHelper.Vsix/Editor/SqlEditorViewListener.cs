@@ -61,13 +61,15 @@ internal sealed class SqlEditorViewListener : IVsTextViewCreationListener
             var intelliSense = new IntelliSenseSessions(CompletionBroker, AsyncCompletionBroker);
             var joins = new JoinSuggestionController(view, intelliSense);
             var inserts = new InsertHelperController(view, intelliSense);
-            var filter = new SqlEditorCommandFilter(view, () => Expander, intelliSense, joins, inserts);
+            var stars = new StarExpansionController(view, intelliSense);
+            var filter = new SqlEditorCommandFilter(view, () => Expander, intelliSense, joins, inserts, stars);
             if (textViewAdapter.AddCommandFilter(filter, out var next) == Microsoft.VisualStudio.VSConstants.S_OK)
             {
                 filter.Next = next;
                 view.Properties[typeof(SqlEditorCommandFilter)] = filter;
                 view.Properties[typeof(JoinSuggestionController)] = joins;
                 view.Properties[typeof(InsertHelperController)] = inserts;
+                view.Properties[typeof(StarExpansionController)] = stars;
             }
         }
         catch (Exception ex)

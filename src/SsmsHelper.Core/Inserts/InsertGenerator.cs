@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using SsmsHelper.Core.Formatting;
 using SsmsHelper.Core.Metadata;
 using SsmsHelper.Core.Parsing;
 
@@ -13,7 +14,10 @@ public enum InsertLayout
     /// <summary>One column and one value per line, each value commented with column name, type, NULL and default.</summary>
     Expanded,
 
-    /// <summary>"INSERT INTO t (a, b)" then "VALUES (0, N'');" on the next line, without comments.</summary>
+    /// <summary>
+    /// Shift+Enter: "INSERT INTO t", then "(a, b)" indented, "VALUES", then "(0, N'');" indented; lists wrap at
+    /// 120 characters; no comments.
+    /// </summary>
     Compact,
 }
 
@@ -75,7 +79,8 @@ public static class InsertGenerator
 
             if (layout == InsertLayout.Compact)
             {
-                text.Append(" (").Append(string.Join(", ", rows.Select(r => SqlIdentifier.Quote(r.Name)))).Append(')');
+                text.Append(newLine).Append(indent).Append(Tab);
+                AppendWrappedList(text, rows.Select(r => SqlIdentifier.Quote(r.Name)).ToList(), indent, newLine);
             }
             else
             {
@@ -96,9 +101,11 @@ public static class InsertGenerator
         var values = rows.Select(r => r.Column is null ? "NULL" : Placeholder(r.Column, options)).ToList();
         if (layout == InsertLayout.Compact)
         {
-            text.Append(newLine).Append(indent).Append("VALUES (");
-            var first = text.Length;
-            text.Append(string.Join(", ", values)).Append(");");
+            text.Append(newLine).Append(indent).Append("VALUES");
+            text.Append(newLine).Append(indent).Append(Tab);
+            var first = text.Length + 1; // after the "("
+            AppendWrappedList(text, values, indent, newLine);
+            text.Append(';');
             return new InsertExpansion(text.ToString(), first);
         }
 
@@ -122,6 +129,17 @@ public static class InsertGenerator
         text.Append(newLine).Append(indent).Append(");");
 
         return new InsertExpansion(text.ToString(), caret);
+    }
+
+    /// <summary>
+    /// "(a, b, c)" for the compact layout, wrapped at <see cref="LineWrap.MaxLineLength"/>; continuation lines line up
+    /// inside the parenthesis. The caller has already written the indent of the first line.
+    /// </summary>
+    private static void AppendWrappedList(StringBuilder text, IReadOnlyList<string> items, string indent, string newLine)
+    {
+        var inside = indent + Tab + " ";
+        var lines = LineWrap.Wrap(items, inside.Length, inside.Length);
+        text.Append('(').Append(string.Join(newLine + inside, lines)).Append(')');
     }
 
     /// <summary>A literal of the column's type that SQL Server accepts as-is.</summary>

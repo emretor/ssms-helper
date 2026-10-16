@@ -77,8 +77,10 @@ public class InsertGeneratorTests
         var (result, caret) = await Expand("  INSERT INTO dbo.Orders|", layout: InsertLayout.Compact);
 
         Assert.Equal(
-            "  INSERT INTO dbo.Orders (CustomerId, ShippingAddressId, OrderDate, Status)\n" +
-            "  VALUES (0, 0, GETDATE(), '');",
+            "  INSERT INTO dbo.Orders\n" +
+            "      (CustomerId, ShippingAddressId, OrderDate, Status)\n" +
+            "  VALUES\n" +
+            "      (0, 0, GETDATE(), '');",
             result);
         Assert.Equal(result.IndexOf("(0", StringComparison.Ordinal) + 1, caret);
     }
@@ -88,7 +90,29 @@ public class InsertGeneratorTests
     {
         var (result, _) = await Expand("INSERT INTO dbo.Orders (Status, CustomerId)|", layout: InsertLayout.Compact);
 
-        Assert.Equal("INSERT INTO dbo.Orders (Status, CustomerId)\nVALUES ('', 0);", result);
+        Assert.Equal("INSERT INTO dbo.Orders (Status, CustomerId)\nVALUES\n    ('', 0);", result);
+    }
+
+    [Fact]
+    public async Task Compact_WrapsLongListsInsideTheParenthesis()
+    {
+        var sample = new SampleSchema().Object(1, "dbo", "Wide");
+        for (var i = 1; i <= 15; i++)
+        {
+            sample.Column(1, i, $"SomeLongColumnName{i:00}", "nvarchar", maxLength: 100);
+        }
+
+        var (result, _) = await Expand("INSERT INTO dbo.Wide|", sample, layout: InsertLayout.Compact);
+
+        var lines = result.Split('\n');
+        Assert.Equal("INSERT INTO dbo.Wide", lines[0]);
+        Assert.StartsWith("    (SomeLongColumnName01, ", lines[1]);
+        Assert.StartsWith("     SomeLongColumnName", lines[2]);              // lined up inside the "("
+        Assert.All(lines, l => Assert.True(l.Length <= 120, l));
+        var values = Array.IndexOf(lines, "VALUES");
+        Assert.True(values > 2);
+        Assert.EndsWith("SomeLongColumnName15)", lines[values - 1]);
+        Assert.Equal("    (N'', N'', N'', N'', N'', N'', N'', N'', N'', N'', N'', N'', N'', N'', N'');", lines[values + 1]);
     }
 
     [Fact]
