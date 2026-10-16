@@ -85,6 +85,10 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 
 ## Editor integration notes
 
+- **Key rule for every code generator (user decision):** Tab gives the default, wide form (one item per line,
+  comments where they help); Shift+Enter gives the compact form. New generators (EXEC, UPDATE, ...) follow it.
+  Shift+Enter arrives as VSStd2K RETURN, so check `Keyboard.Modifiers == Shift`. Plain Enter is never taken.
+
 - Editor decisions live in Core (`SsmsHelper.Core.Editor`) as pure functions with unit tests: `CaretGuard`,
   `JoinPopupRules` (popup keys, refilter keys, ON/JOIN pre-check, auto-open, keep-open, filter) and `InsertKeyRules`
   (Tab / Shift+Enter layouts, IntelliSense-commit detection, paired undo). The Vsix only maps VS commands to
@@ -125,6 +129,15 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - `samples/ShopDemo.sql` creates `SsmsHelperDemo` with every relationship shape the helper handles; use it for
   manual testing in SSMS.
 
+## SELECT * expansion notes
+
+- `StarContextAnalyzer` (Core/Selects) needs the text after the caret (the FROM clause follows the `*`), so it
+  tokenizes the whole script, only on Tab and only when the character before the caret is `*`.
+- FROM/JOIN parsing is shared with the JOIN helper in `Joins/TableSources` (internal). Change it there, for both.
+- `StarExpansionController` sits after INSERT and before snippets in the key order. `StarKeyRules`: Tab = one
+  column per line aligned under the first, Shift+Enter = compact (SELECT alone, columns wrapped at 120 characters and
+  indented); FROM on its own line in both.
+
 ## INSERT helper notes
 
 - `InsertContextAnalyzer` reads tokens backwards from the caret ("INSERT [INTO] name [(cols)]" then only whitespace),
@@ -134,7 +147,8 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - Tab order in `SqlEditorCommandFilter`: open JOIN popup, then `InsertHelperController.TryTrigger`, then snippets.
   With a cached schema and an unknown table, Tab is passed on (it may be IntelliSense completing the name).
   Without a cached schema, Tab is consumed while the schema loads; any edit meanwhile cancels the expansion.
-- Shift+Enter gives `InsertLayout.Compact` (one-line column list, `VALUES (...)` on the next line, no comments).
+- Shift+Enter gives `InsertLayout.Compact`: `INSERT INTO t`, indented `(cols)`, `VALUES`, indented `(values);`, no
+  comments, lists wrapped by the shared `Formatting/LineWrap` (also used by SELECT * compact).
   It arrives as VSStd2K RETURN (Edit.BreakLine); the filter checks `Keyboard.Modifiers == Shift`.
 - Picking the table from SSMS IntelliSense with Enter or Tab also expands: the filter records the caret line before
   the key, and `InsertHelperController.AfterKey` expands when the caret stayed on the same line, right after a known

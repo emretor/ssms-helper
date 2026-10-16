@@ -23,13 +23,19 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
     private readonly IntelliSenseSessions _intelliSense;
 
     public SqlEditorCommandFilter(
-        IWpfTextView view, Func<SnippetExpander> expander, IntelliSenseSessions intelliSense, JoinSuggestionController joins, InsertHelperController inserts)
+        IWpfTextView view,
+        Func<SnippetExpander> expander,
+        IntelliSenseSessions intelliSense,
+        JoinSuggestionController joins,
+        InsertHelperController inserts,
+        StarExpansionController stars)
     {
         _view = view;
         _expander = expander;
         _intelliSense = intelliSense;
         Joins = joins;
         Inserts = inserts;
+        Stars = stars;
     }
 
     internal IOleCommandTarget? Next { get; set; }
@@ -37,6 +43,8 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
     internal JoinSuggestionController Joins { get; }
 
     internal InsertHelperController Inserts { get; }
+
+    internal StarExpansionController Stars { get; }
 
     public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
     {
@@ -67,7 +75,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         // Shift+Enter arrives as RETURN (Edit.BreakLine); only the modifier tells it apart.
         var shiftOnly = key == EditorKey.Return && IsShiftOnly();
 
-        // Order matters: an open JOIN popup, then INSERT (Tab, Shift+Enter), then snippets (Tab).
+        // Order matters: an open JOIN popup, then INSERT and SELECT * (Tab, Shift+Enter), then snippets (Tab).
         if (isEditorCommand)
         {
             if (SafeInvoke(() => Joins.PreprocessCommand(key)))
@@ -76,6 +84,11 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
             }
 
             if (InsertKeyRules.BeforeKey(key, shiftOnly) is { } insertLayout && SafeInvoke(() => Inserts.TryTrigger(insertLayout)))
+            {
+                return VSConstants.S_OK;
+            }
+
+            if (StarKeyRules.BeforeKey(key, shiftOnly) is { } starLayout && SafeInvoke(() => Stars.TryTrigger(starLayout)))
             {
                 return VSConstants.S_OK;
             }
