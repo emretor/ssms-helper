@@ -11,6 +11,15 @@
     </Groups>
 
     <Buttons>
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidSuggestJoin" priority="0x0080" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>SSMS Helper: Suggest Join</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperSuggestJoin</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperSuggestJoin</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="guidSsmsHelperCmdSet" id="cmdidRefreshSchema" priority="0x0090" type="Button">
         <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
         <Strings>
@@ -33,6 +42,7 @@
       <IDSymbol name="ToolsMenuGroup" value="0x1020" />
       <IDSymbol name="cmdidAbout" value="0x0100" />
       <IDSymbol name="cmdidRefreshSchema" value="0x0101" />
+      <IDSymbol name="cmdidSuggestJoin" value="0x0102" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

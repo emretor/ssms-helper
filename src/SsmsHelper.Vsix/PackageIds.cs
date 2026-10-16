@@ -12,4 +12,5 @@ internal static class PackageIds
 
     public const int AboutCommandId = 0x0100;
     public const int RefreshSchemaCommandId = 0x0101;
+    public const int SuggestJoinCommandId = 0x0102;
 }
