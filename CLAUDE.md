@@ -153,6 +153,17 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - An IntelliSense pick (Enter/Tab, Shift+Enter) expands like Tab via `ExecHelperController.AfterKey`, the same
   same-line/non-whitespace check and paired undo as the INSERT helper; it never starts a schema load.
 
+## WHERE safety check notes
+
+- `Core/Safety/UnfilteredWriteDetector`: one tokenizer pass, then a forward scan per UPDATE/DELETE keyword until
+  WHERE (depth 0, outside CASE), `;`, an unbalanced `)` or the next statement keyword. Skips CREATE/ALTER
+  PROC/TRIGGER/FUNCTION batches (until GO), temp tables, table variables and the non-statement uses of the words.
+- `Vsix/Editor/ExecuteGuard` hooks Query.Execute ({52692960-56BC-4989-B5D3-94C47A513E8D}, id 1, from
+  `SQLWorkbenchCommands` in SQLEditors.dll) via DTE `CommandEvents.BeforeExecute` and sets `CancelDefault`. The text
+  view command filter never sees Execute. The DTE event object must stay referenced (static field).
+- The executed text comes from the last focused SQL view (selection or whole buffer), so Execute from the toolbar
+  or results grid checks the right editor. Any exception is logged and execution goes ahead.
+
 ## INSERT helper notes
 
 - `InsertContextAnalyzer` reads tokens backwards from the caret ("INSERT [INTO] name [(cols)]" then only whitespace),

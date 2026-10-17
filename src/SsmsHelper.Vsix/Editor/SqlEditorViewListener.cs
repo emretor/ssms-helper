@@ -73,6 +73,8 @@ internal sealed class SqlEditorViewListener : IVsTextViewCreationListener
                 view.Properties[typeof(StarExpansionController)] = stars;
                 view.Properties[typeof(ExecHelperController)] = execs;
             }
+
+            ExecuteGuard.Attach(view);
         }
         catch (Exception ex)
         {

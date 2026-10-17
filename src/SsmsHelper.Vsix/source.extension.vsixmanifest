@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="SsmsHelper.a8e1d928-b079-4c18-acf5-603c10e1b44b" Version="0.8.1" Language="en-US" Publisher="Emretor" />
+    <Identity Id="SsmsHelper.a8e1d928-b079-4c18-acf5-603c10e1b44b" Version="0.8.2" Language="en-US" Publisher="Emretor" />
     <DisplayName>SSMS Helper</DisplayName>
     <Description xml:space="preserve">Productivity helpers for SQL Server Management Studio: snippet expansion (ssf), foreign-key JOIN suggestions and INSERT statement generation.</Description>
     <Tags>SSMS;SQL;T-SQL;JOIN;INSERT;snippets</Tags>

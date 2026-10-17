@@ -33,7 +33,11 @@ internal sealed class ExecHelperController
     /// Called on Tab or Shift+Enter. Returns true when the parameters were written (or will be after a schema load);
     /// false lets the key do its usual work, also when the procedure is unknown (IntelliSense may be completing it).
     /// </summary>
-    public bool TryTrigger(ExecLayout layout) => TryExpandAtCaret(layout, fromPick: false);
+    public bool TryTrigger(ExecLayout layout)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return TryExpandAtCaret(layout, fromPick: false);
+    }
 
     /// <summary>
     /// True once when the buffer is still exactly as an expansion that followed an IntelliSense pick left it, so one

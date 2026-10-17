@@ -1,12 +1,13 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.8.1, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.8.2, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
 - [INSERT helper](#insert-helper)
 - [Expand SELECT *](#expand-select-)
 - [EXEC helper](#exec-helper)
+- [WHERE safety check](#where-safety-check)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
 - [Menu commands and shortcuts](#menu-commands-and-shortcuts)
 - [Status bar messages](#status-bar-messages)
@@ -269,7 +270,30 @@ EXEC dbo.GetOrders
 - Unknown name: the status bar says it is not a stored procedure in this database, and Tab works as usual.
   Dynamic SQL (`EXEC (@sql)`, `EXEC @proc`) and temporary procedures are left alone.
 
-## Schema loading and Refresh Schema
+## WHERE safety check
+
+When you execute (F5, Ctrl+E or the Execute button) a script with an `UPDATE` or `DELETE` that has no `WHERE`,
+SSMS Helper asks first:
+
+```
+DELETE without WHERE on dbo.Orders
+
+This changes every row. Run anyway?
+```
+
+- **OK** runs the script as usual; **Cancel** (the default, so Enter does not run it) stops it and the status bar
+  says `execution cancelled.`
+- It checks what SSMS runs: the selection, or the whole script when nothing is selected. Up to five statements are
+  listed.
+- Still warns for `UPDATE ... FROM ... JOIN` without `WHERE`, and names the table behind an alias
+  (`UPDATE o ... FROM dbo.Orders o` says `dbo.Orders`).
+- Leaves alone: temp tables (`#work`) and table variables (`@rows`), `TRUNCATE TABLE`, statements inside
+  `CREATE`/`ALTER PROCEDURE`, `TRIGGER` or `FUNCTION` (creating them runs nothing), and other uses of the words
+  such as `ON DELETE CASCADE`, `GRANT UPDATE`, `MERGE ... THEN DELETE`, `UPDATE STATISTICS`.
+- `WHERE CURRENT OF cursor` counts as a `WHERE`. A `WHERE 1 = 1` is not questioned.
+- Text in strings and comments is ignored, so dynamic SQL (`EXEC (@sql)`) is not checked.
+- It cannot be turned off yet; that comes with the settings page (SSM-12).
+
 
 - Tables, views, columns, keys, foreign keys and stored procedures (with parameters) of the window's database are loaded in the background the first
   time a helper needs them, and kept for 30 minutes. After that they are reloaded in the background while the old
@@ -312,6 +336,7 @@ All messages start with `SSMS Helper:`.
 | `<x> is not a table or alias in this query.` | `x.*` does not match any table in the FROM clause |
 | `<n> parameter(s) of <procedure>.` | EXEC helper done |
 | `<name> is not a stored procedure in <db>.` | EXEC helper: unknown procedure |
+| `execution cancelled.` | You chose Cancel in the WHERE safety check |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
 | `the query window is not connected to a database.` | Suggest Join command in a disconnected window |
 | `place the caret after "JOIN table alias" or after "ON" ...` | Suggest Join command used elsewhere |

@@ -8,7 +8,9 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
   the compact form.
 - **Expand `*`**: Tab right after the `*` in `SELECT * FROM ...` replaces it with the column list, one per line;
   Shift+Enter writes the compact form.
-- **EXEC helper**: `EXEC dbo.Procedure` + Tab lists its parameters with empty values and their types.
+
+- **WHERE safety check**: Execute asks before running an `UPDATE` or `DELETE` without `WHERE`.
+- **EXEC helper**: `EXEC dbo.Procedure` + Tab lists its parameters with empty values and their types.
 
 Everywhere: Tab gives the default (wide) form, Shift+Enter the compact one.
 

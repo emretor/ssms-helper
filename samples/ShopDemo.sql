@@ -23,6 +23,11 @@
       EXEC dbo.GetOrders                        -- three parameters
       EXEC dbo.CountOrders                      -- an OUTPUT parameter
       EXEC dbo.PurgeOldOrders                   -- no parameters
+
+    WHERE safety check (select the line and press F5; Cancel stops it, OK really runs it):
+      DELETE FROM dbo.Reviews                   -- asks first
+      UPDATE p SET Name = '' FROM dbo.Products p -- asks first, names dbo.Products
+      DELETE FROM dbo.Reviews WHERE 1 = 0       -- runs without asking
 */
 USE master;
 GO
