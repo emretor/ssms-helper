@@ -200,31 +200,35 @@ public static class InsertGenerator
     }
 
     /// <summary>Declared type as it would appear in CREATE TABLE, e.g. "nvarchar(100)" or "decimal(10, 2)".</summary>
-    public static string FormatType(ColumnInfo column)
+    public static string FormatType(ColumnInfo column) =>
+        FormatType(column.TypeName, column.BaseTypeName, column.MaxLength, column.Precision, column.Scale);
+
+    /// <summary>Declared type from its catalog parts (sys.columns or sys.parameters).</summary>
+    public static string FormatType(string typeName, string baseTypeName, short maxLength, byte precision, byte scale)
     {
-        if (!string.Equals(column.TypeName, column.BaseTypeName, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(typeName, baseTypeName, StringComparison.OrdinalIgnoreCase))
         {
-            return column.TypeName; // alias type such as sysname
+            return typeName; // alias type such as sysname, or a table type
         }
 
-        var type = column.TypeName.ToLowerInvariant();
+        var type = typeName.ToLowerInvariant();
         switch (type)
         {
             case "varchar":
             case "char":
             case "varbinary":
             case "binary":
-                return $"{type}({Length(column.MaxLength)})";
+                return $"{type}({Length(maxLength)})";
             case "nvarchar":
             case "nchar":
-                return $"{type}({(column.MaxLength < 0 ? "max" : (column.MaxLength / 2).ToString(CultureInfo.InvariantCulture))})";
+                return $"{type}({(maxLength < 0 ? "max" : (maxLength / 2).ToString(CultureInfo.InvariantCulture))})";
             case "decimal":
             case "numeric":
-                return $"{type}({column.Precision}, {column.Scale})";
+                return $"{type}({precision}, {scale})";
             case "datetime2":
             case "datetimeoffset":
             case "time":
-                return column.Scale == 7 ? type : $"{type}({column.Scale})";
+                return scale == 7 ? type : $"{type}({scale})";
             default:
                 return type;
         }

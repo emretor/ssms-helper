@@ -1,11 +1,12 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.7.2, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.8.1, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
 - [INSERT helper](#insert-helper)
 - [Expand SELECT *](#expand-select-)
+- [EXEC helper](#exec-helper)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
 - [Menu commands and shortcuts](#menu-commands-and-shortcuts)
 - [Status bar messages](#status-bar-messages)
@@ -240,9 +241,37 @@ Which columns you get (shown on one line here for brevity):
 - There must be a FROM clause: `SELECT *` with nothing after it yet stays as it is.
 - The caret ends after the last column. Ctrl+Z puts the `*` back.
 
+## EXEC helper
+
+Type `EXEC dbo.GetOrders` (or `EXECUTE`, or `EXEC @rc = dbo.GetOrders`) and press:
+
+- **Tab** (default): one parameter per line, values left empty for you, the type as a comment, `;` on its own line:
+
+```sql
+EXEC dbo.GetOrders
+    @CustomerId = , -- int
+    @From = ,       -- datetime2
+    @Status =       -- varchar(20)
+;
+```
+
+- **Shift+Enter** (compact): on the EXEC line, no comments, wrapped at 120 characters:
+  `EXEC dbo.GetOrders @CustomerId = , @From = , @Status = ;`
+
+- **Picking from the IntelliSense list** (`EXEC dbo.GetOr`, pick `GetOrders`) with Enter or Tab writes the Tab
+  form; picking with Shift+Enter writes the compact form. One Ctrl+Z takes back both the parameters and the pick.
+  A pick only uses an already loaded schema; picking a system procedure such as `sp_who` does nothing extra.
+- The caret lands after the first `= `.
+- OUTPUT parameters say so in the comment (`-- int OUTPUT`); write `@yourVariable OUTPUT` as the value.
+- A procedure without parameters just gets `;`.
+- Every parameter is listed. SQL Server does not tell which parameters have a default, so optional ones are listed
+  too; delete the ones you do not need.
+- Unknown name: the status bar says it is not a stored procedure in this database, and Tab works as usual.
+  Dynamic SQL (`EXEC (@sql)`, `EXEC @proc`) and temporary procedures are left alone.
+
 ## Schema loading and Refresh Schema
 
-- Tables, views, columns, keys and foreign keys of the window's database are loaded in the background the first
+- Tables, views, columns, keys, foreign keys and stored procedures (with parameters) of the window's database are loaded in the background the first
   time a helper needs them, and kept for 30 minutes. After that they are reloaded in the background while the old
   copy keeps working.
 - The first use on a new database may show `loading schema for ...` in the status bar. The JOIN list then opens
@@ -281,6 +310,8 @@ All messages start with `SSMS Helper:`.
 | `expanded * to <n> column(s).` | SELECT * expansion done |
 | `cannot expand *: ...` | A table behind the `*` is unknown, derived or temporary |
 | `<x> is not a table or alias in this query.` | `x.*` does not match any table in the FROM clause |
+| `<n> parameter(s) of <procedure>.` | EXEC helper done |
+| `<name> is not a stored procedure in <db>.` | EXEC helper: unknown procedure |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
 | `the query window is not connected to a database.` | Suggest Join command in a disconnected window |
 | `place the caret after "JOIN table alias" or after "ON" ...` | Suggest Join command used elsewhere |

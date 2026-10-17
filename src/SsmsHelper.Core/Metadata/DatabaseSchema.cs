@@ -4,18 +4,26 @@ using System.Linq;
 
 namespace SsmsHelper.Core.Metadata;
 
-/// <summary>Immutable snapshot of one database's user tables, views and foreign keys.</summary>
+/// <summary>Immutable snapshot of one database's user tables, views, foreign keys and stored procedures.</summary>
 public sealed class DatabaseSchema
 {
     private readonly Dictionary<TableName, TableInfo> _tables;
     private readonly Dictionary<TableName, List<ForeignKeyInfo>> _foreignKeysByTable;
+    private readonly Dictionary<TableName, ProcedureInfo> _procedures;
 
-    public DatabaseSchema(IEnumerable<TableInfo> tables, IEnumerable<ForeignKeyInfo> foreignKeys, DateTimeOffset loadedAt)
+    public DatabaseSchema(
+        IEnumerable<TableInfo> tables, IEnumerable<ForeignKeyInfo> foreignKeys, DateTimeOffset loadedAt, IEnumerable<ProcedureInfo>? procedures = null)
     {
         _tables = new Dictionary<TableName, TableInfo>();
         foreach (var table in tables)
         {
             _tables[table.Name] = table;
+        }
+
+        _procedures = new Dictionary<TableName, ProcedureInfo>();
+        foreach (var procedure in procedures ?? Array.Empty<ProcedureInfo>())
+        {
+            _procedures[procedure.Name] = procedure;
         }
 
         ForeignKeys = foreignKeys.ToList();
@@ -40,27 +48,36 @@ public sealed class DatabaseSchema
 
     public int ColumnCount => _tables.Values.Sum(t => t.Columns.Count);
 
+    public IReadOnlyCollection<ProcedureInfo> Procedures => _procedures.Values;
+
     public TableInfo? GetTable(TableName name) => _tables.TryGetValue(name, out var table) ? table : null;
 
     /// <summary>
     /// Resolves a possibly unqualified name the way SQL Server does for most users: the given
     /// schema if any, otherwise <paramref name="defaultSchema"/>, otherwise the only table with that name.
     /// </summary>
-    public TableInfo? FindTable(string? schema, string name, string defaultSchema = "dbo")
+    public TableInfo? FindTable(string? schema, string name, string defaultSchema = "dbo") =>
+        Find(_tables, t => t.Name, schema, name, defaultSchema);
+
+    /// <summary>Resolves a procedure name with the same rules as <see cref="FindTable"/>.</summary>
+    public ProcedureInfo? FindProcedure(string? schema, string name, string defaultSchema = "dbo") =>
+        Find(_procedures, p => p.Name, schema, name, defaultSchema);
+
+    private static T? Find<T>(Dictionary<TableName, T> map, Func<T, TableName> nameOf, string? schema, string name, string defaultSchema)
+        where T : class
     {
         if (!string.IsNullOrEmpty(schema))
         {
-            return GetTable(new TableName(schema!, name));
+            return map.TryGetValue(new TableName(schema!, name), out var exact) ? exact : null;
         }
 
-        var inDefault = GetTable(new TableName(defaultSchema, name));
-        if (inDefault is not null)
+        if (map.TryGetValue(new TableName(defaultSchema, name), out var inDefault))
         {
             return inDefault;
         }
 
-        var matches = _tables.Values
-            .Where(t => string.Equals(t.Name.Name, name, StringComparison.OrdinalIgnoreCase))
+        var matches = map.Values
+            .Where(v => string.Equals(nameOf(v).Name, name, StringComparison.OrdinalIgnoreCase))
             .Take(2)
             .ToList();
         return matches.Count == 1 ? matches[0] : null;

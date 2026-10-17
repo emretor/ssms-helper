@@ -48,6 +48,24 @@ public sealed record TableInfo(
 
 public sealed record ForeignKeyColumn(string Column, string ReferencedColumn);
 
+/// <summary>A stored procedure parameter, from sys.parameters.</summary>
+/// <param name="Name">Name including the "@".</param>
+/// <param name="TypeName">Declared type, which may be a user-defined alias or table type.</param>
+/// <param name="BaseTypeName">System type the declared type is based on.</param>
+/// <param name="MaxLength">Bytes, as in sys.parameters; -1 for (max) types.</param>
+public sealed record ParameterInfo(
+    string Name,
+    int Ordinal,
+    string TypeName,
+    string BaseTypeName,
+    short MaxLength,
+    byte Precision,
+    byte Scale,
+    bool IsOutput);
+
+/// <param name="Parameters">In parameter_id order; empty for procedures without parameters.</param>
+public sealed record ProcedureInfo(TableName Name, IReadOnlyList<ParameterInfo> Parameters);
+
 /// <summary>A foreign key from <see cref="Table"/> to <see cref="ReferencedTable"/>.</summary>
 /// <param name="Columns">Column pairs in constraint order.</param>
 public sealed record ForeignKeyInfo(

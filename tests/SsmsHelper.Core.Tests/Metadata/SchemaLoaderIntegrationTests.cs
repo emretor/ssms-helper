@@ -54,7 +54,12 @@ CREATE TABLE dbo.OrderLineNotes (
     CONSTRAINT FK_Notes_Lines FOREIGN KEY (OrderId, LineNumber) REFERENCES dbo.OrderLines (OrderId, LineNumber));
 CREATE TABLE sales.Customers (CustomerId int NOT NULL);
 GO
-CREATE VIEW dbo.vOrders AS SELECT OrderId, CustomerId FROM dbo.Orders;";
+CREATE VIEW dbo.vOrders AS SELECT OrderId, CustomerId FROM dbo.Orders;
+GO
+CREATE PROCEDURE dbo.GetOrders @CustomerId int, @From datetime2(3) = NULL, @Status varchar(20) = 'New', @Total dbo.Money19 OUTPUT
+AS SELECT 1;
+GO
+CREATE PROCEDURE sales.Cleanup AS SELECT 1;";
 
     public async ValueTask InitializeAsync()
     {
@@ -130,6 +135,19 @@ CREATE VIEW dbo.vOrders AS SELECT OrderId, CustomerId FROM dbo.Orders;";
         var composite = Assert.Single(schema.ForeignKeys, f => f.Name == "FK_Notes_Lines");
         Assert.Equal(new[] { "OrderId", "LineNumber" }, composite.Columns.Select(c => c.Column));
         Assert.Equal(5, schema.ForeignKeys.Count);
+
+        // Procedures with parameters in order, including alias types and OUTPUT; one without parameters.
+        Assert.Equal(new[] { "dbo.GetOrders", "sales.Cleanup" }, schema.Procedures.Select(p => p.Name.ToString()).OrderBy(n => n, StringComparer.Ordinal));
+        var getOrders = schema.FindProcedure(null, "GetOrders")!;
+        Assert.Equal(new[] { "@CustomerId", "@From", "@Status", "@Total" }, getOrders.Parameters.Select(p => p.Name));
+        Assert.Equal("datetime2", getOrders.Parameters[1].TypeName);
+        Assert.Equal(3, getOrders.Parameters[1].Scale);
+        Assert.Equal(20, getOrders.Parameters[2].MaxLength);
+        Assert.Equal("Money19", getOrders.Parameters[3].TypeName);
+        Assert.Equal("decimal", getOrders.Parameters[3].BaseTypeName);
+        Assert.True(getOrders.Parameters[3].IsOutput);
+        Assert.False(getOrders.Parameters[0].IsOutput);
+        Assert.Empty(schema.FindProcedure("sales", "Cleanup")!.Parameters);
     }
 
     private string DatabaseConnectionString() =>

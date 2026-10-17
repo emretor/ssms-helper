@@ -140,6 +140,19 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   column per line aligned under the first, Shift+Enter = compact (SELECT alone, columns wrapped at 120 characters and
   indented); FROM on its own line in both.
 
+## EXEC helper notes
+
+- `SchemaLoader.Query` has a fifth result set: procedures LEFT JOIN `sys.parameters` (parameter_id > 0), one row per
+  parameter, a NULL ParameterName for procedures without parameters. `ReadAsync` tolerates readers without it.
+- `ExecContextAnalyzer` reads backwards from the caret like the INSERT one (`EXEC[UTE] [@rc =] name`).
+  `ExecGenerator`: Tab = one parameter per line, empty values, type comments, `;` on its own line (a `;` after the
+  last value would be inside its comment); Shift+Enter = compact, `LineWrap`, no comments.
+- SQL Server does not expose procedure parameter defaults (`has_default_value` is CLR-only), so every parameter
+  is listed. A "required only" form would need parsing `sys.sql_modules`.
+- Key order: INSERT, SELECT *, EXEC, snippets.
+- An IntelliSense pick (Enter/Tab, Shift+Enter) expands like Tab via `ExecHelperController.AfterKey`, the same
+  same-line/non-whitespace check and paired undo as the INSERT helper; it never starts a schema load.
+
 ## INSERT helper notes
 
 - `InsertContextAnalyzer` reads tokens backwards from the caret ("INSERT [INTO] name [(cols)]" then only whitespace),

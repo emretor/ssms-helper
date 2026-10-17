@@ -35,6 +35,46 @@ internal sealed class SampleSchema
         return this;
     }
 
+    private readonly List<(int Id, string Schema, string Name)> _procedures = new();
+    private readonly List<(int ProcedureId, int Ordinal, string Name, string Type, string BaseType, short MaxLength, byte Precision, byte Scale, bool Output)> _parameters = new();
+
+    public SampleSchema Procedure(int id, string schema, string name)
+    {
+        _procedures.Add((id, schema, name));
+        return this;
+    }
+
+    public SampleSchema Parameter(
+        int procedureId, int ordinal, string name, string type = "int", short maxLength = 4, byte precision = 10, byte scale = 0,
+        bool output = false, string? baseType = null)
+    {
+        _parameters.Add((procedureId, ordinal, name, type, baseType ?? type, maxLength, precision, scale, output));
+        return this;
+    }
+
+    /// <summary>The fifth result set: one row per parameter, one row with NULL parameter for a procedure without any.</summary>
+    private DataTable ProcedureParameters()
+    {
+        var table = Table(
+            "ObjectId:int", "SchemaName:string", "ObjectName:string", "ParameterName:string", "Ordinal:int",
+            "TypeName:string", "BaseTypeName:string", "MaxLength:short", "Precision:byte", "Scale:byte", "IsOutput:bool");
+        foreach (var (id, schema, name) in _procedures)
+        {
+            var parameters = _parameters.Where(p => p.ProcedureId == id).OrderBy(p => p.Ordinal).ToList();
+            if (parameters.Count == 0)
+            {
+                table.Rows.Add(id, schema, name, DBNull.Value, DBNull.Value, DBNull.Value, DBNull.Value, DBNull.Value, DBNull.Value, DBNull.Value, DBNull.Value);
+            }
+
+            foreach (var p in parameters)
+            {
+                table.Rows.Add(id, schema, name, p.Name, p.Ordinal, p.Type, p.BaseType, p.MaxLength, p.Precision, p.Scale, p.Output);
+            }
+        }
+
+        return table;
+    }
+
     public SampleSchema PrimaryKey(int objectId, params string[] columns)
     {
         foreach (var column in columns)
@@ -57,7 +97,7 @@ internal sealed class SampleSchema
 
     public Task<DatabaseSchema> LoadAsync(DateTimeOffset? loadedAt = null)
     {
-        using var reader = new DataTableReader(new[] { Objects, Columns, PrimaryKeys, ForeignKeys });
+        using var reader = new DataTableReader(new[] { Objects, Columns, PrimaryKeys, ForeignKeys, ProcedureParameters() });
         return SchemaLoader.ReadAsync(reader, loadedAt ?? DateTimeOffset.UnixEpoch);
     }
 

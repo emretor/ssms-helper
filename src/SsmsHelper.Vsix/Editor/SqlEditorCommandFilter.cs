@@ -28,7 +28,8 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         IntelliSenseSessions intelliSense,
         JoinSuggestionController joins,
         InsertHelperController inserts,
-        StarExpansionController stars)
+        StarExpansionController stars,
+        ExecHelperController execs)
     {
         _view = view;
         _expander = expander;
@@ -36,6 +37,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         Joins = joins;
         Inserts = inserts;
         Stars = stars;
+        Execs = execs;
     }
 
     internal IOleCommandTarget? Next { get; set; }
@@ -46,6 +48,8 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
 
     internal StarExpansionController Stars { get; }
 
+    internal ExecHelperController Execs { get; }
+
     public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -53,7 +57,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         // One Ctrl+Z after "pick table from IntelliSense + INSERT expansion" undoes both edits and reopens the
         // list for the partial name, since the user most likely picked the wrong table.
         if (pguidCmdGroup == VSConstants.GUID_VSStandardCommandSet97 && nCmdID == (uint)VSConstants.VSStd97CmdID.Undo &&
-            SafeInvoke(Inserts.TakePairedUndo) && Next is not null)
+            SafeInvoke(TakePairedUndo) && Next is not null)
         {
             var undone = Next.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
             if (ErrorHandler.Succeeded(undone))
@@ -75,7 +79,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         // Shift+Enter arrives as RETURN (Edit.BreakLine); only the modifier tells it apart.
         var shiftOnly = key == EditorKey.Return && IsShiftOnly();
 
-        // Order matters: an open JOIN popup, then INSERT and SELECT * (Tab, Shift+Enter), then snippets (Tab).
+        // Order matters: an open JOIN popup, then INSERT, SELECT * and EXEC (Tab, Shift+Enter), then snippets (Tab).
         if (isEditorCommand)
         {
             if (SafeInvoke(() => Joins.PreprocessCommand(key)))
@@ -93,6 +97,11 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
                 return VSConstants.S_OK;
             }
 
+            if (ExecKeyRules.BeforeKey(key, shiftOnly) is { } execLayout && SafeInvoke(() => Execs.TryTrigger(execLayout)))
+            {
+                return VSConstants.S_OK;
+            }
+
             if (key == EditorKey.Tab && SafeInvoke(TryExpandSnippet))
             {
                 return VSConstants.S_OK;
@@ -102,6 +111,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         var typed = key == EditorKey.TypeChar ? GetTypedChar(pvaIn) : null;
         var isCommitKey = InsertKeyRules.MayCommitCompletion(key);
         var layout = InsertKeyRules.AfterKeyLayout(key, shiftOnly);
+        var execAfterLayout = ExecKeyRules.AfterKeyLayout(key, shiftOnly);
         var beforeKey = isCommitKey ? Inserts.CaptureBeforeKey() : default;
         var result = Next?.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) ?? (int)Constants.OLECMDERR_E_NOTSUPPORTED;
 
@@ -109,10 +119,11 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         {
             SafeInvoke(() =>
             {
-                // Enter or Tab may have committed an IntelliSense table name after "INSERT INTO".
+                // Enter or Tab may have committed an IntelliSense name after "INSERT INTO" or "EXEC".
                 if (isCommitKey)
                 {
                     Inserts.AfterKey(beforeKey, layout);
+                    Execs.AfterKey(beforeKey, execAfterLayout);
                 }
 
                 Joins.PostprocessCommand(key, typed);
@@ -128,6 +139,9 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         ThreadHelper.ThrowIfNotOnUIThread();
         return Next?.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText) ?? (int)Constants.OLECMDERR_E_NOTSUPPORTED;
     }
+
+    // Both are always asked so neither keeps a stale pairing; at most one is set.
+    private bool TakePairedUndo() => Inserts.TakePairedUndo() | Execs.TakePairedUndo();
 
     /// <summary>
     /// SSMS's own List Members (Ctrl+J). Not Complete Word (Ctrl+Space): that inserts the name by itself

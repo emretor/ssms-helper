@@ -2,20 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace SsmsHelper.Core.Metadata;
 
 /// <summary>
-/// Reads table, column, primary key and foreign key metadata from sys catalog views in one round trip.
+/// Reads table, column, primary key, foreign key and stored procedure metadata from sys catalog views in one round trip.
 /// Works with any <see cref="DbConnection"/>, so the extension can pass the SSMS-provided SqlClient
 /// connection and tests can feed fake result sets.
 /// </summary>
 public static class SchemaLoader
 {
     /// <summary>
-    /// Four result sets: objects, columns, primary key columns, foreign key columns.
+    /// Five result sets: objects, columns, primary key columns, foreign key columns, procedure parameters
+    /// (one row per parameter; a procedure without parameters has one row with a NULL ParameterName).
     /// Compatible with SQL Server 2012+ and Azure SQL: GeneratedAlwaysType is read through
     /// COLUMNPROPERTY, which returns NULL on versions without temporal tables.
     /// </summary>
@@ -55,7 +57,17 @@ FROM sys.foreign_keys AS fk
 JOIN sys.foreign_key_columns AS fkc ON fkc.constraint_object_id = fk.object_id
 JOIN sys.columns AS pc ON pc.object_id = fkc.parent_object_id AND pc.column_id = fkc.parent_column_id
 JOIN sys.columns AS rc ON rc.object_id = fkc.referenced_object_id AND rc.column_id = fkc.referenced_column_id
-ORDER BY fk.object_id, fkc.constraint_column_id;";
+ORDER BY fk.object_id, fkc.constraint_column_id;
+
+SELECT o.object_id AS ObjectId, s.name AS SchemaName, o.name AS ObjectName,
+       p.name AS ParameterName, p.parameter_id AS Ordinal,
+       TYPE_NAME(p.user_type_id) AS TypeName, TYPE_NAME(p.system_type_id) AS BaseTypeName,
+       p.max_length AS MaxLength, p.precision AS [Precision], p.scale AS Scale, p.is_output AS IsOutput
+FROM sys.procedures AS o
+JOIN sys.schemas AS s ON s.schema_id = o.schema_id
+LEFT JOIN sys.parameters AS p ON p.object_id = o.object_id AND p.parameter_id > 0
+WHERE o.is_ms_shipped = 0
+ORDER BY o.object_id, p.parameter_id;";
 
     /// <summary>Opens the connection if needed, runs <see cref="Query"/> and builds the schema.</summary>
     public static async Task<DatabaseSchema> LoadAsync(DbConnection connection, DateTimeOffset loadedAt, int commandTimeoutSeconds = 60, CancellationToken cancellationToken = default)
@@ -148,7 +160,40 @@ ORDER BY fk.object_id, fkc.constraint_column_id;";
                 primaryKeys.TryGetValue(pair.Key, out var pk) ? pk : new List<string>()));
         }
 
-        return new DatabaseSchema(tables, foreignKeys, loadedAt);
+        // Procedures came later; a reader without the fifth result set (older fakes) just has none.
+        var procedures = new List<ProcedureInfo>();
+        if (await reader.NextResultAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var byId = new Dictionary<int, (TableName Name, List<ParameterInfo> Parameters)>();
+            var order = new List<int>();
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var id = GetInt(reader, "ObjectId");
+                if (!byId.TryGetValue(id, out var procedure))
+                {
+                    procedure = (new TableName(GetString(reader, "SchemaName"), GetString(reader, "ObjectName")), new List<ParameterInfo>());
+                    byId[id] = procedure;
+                    order.Add(id);
+                }
+
+                if (reader["ParameterName"] is string parameterName)
+                {
+                    procedure.Parameters.Add(new ParameterInfo(
+                        Name: parameterName,
+                        Ordinal: GetInt(reader, "Ordinal"),
+                        TypeName: GetString(reader, "TypeName"),
+                        BaseTypeName: GetString(reader, "BaseTypeName"),
+                        MaxLength: Convert.ToInt16(reader["MaxLength"]),
+                        Precision: Convert.ToByte(reader["Precision"]),
+                        Scale: Convert.ToByte(reader["Scale"]),
+                        IsOutput: GetBool(reader, "IsOutput")));
+                }
+            }
+
+            procedures.AddRange(order.Select(id => new ProcedureInfo(byId[id].Name, byId[id].Parameters)));
+        }
+
+        return new DatabaseSchema(tables, foreignKeys, loadedAt, procedures);
     }
 
     private static async Task NextResultAsync(DbDataReader reader, string what, CancellationToken cancellationToken)

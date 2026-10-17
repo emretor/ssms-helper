@@ -18,6 +18,11 @@
       SELECT * FROM dbo.Customers
       SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId
       SELECT c.Name, o.* FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId
+
+    EXEC helper (press Tab, or Shift+Enter for the compact form, at the end of the line):
+      EXEC dbo.GetOrders                        -- three parameters
+      EXEC dbo.CountOrders                      -- an OUTPUT parameter
+      EXEC dbo.PurgeOldOrders                   -- no parameters
 */
 USE master;
 GO
@@ -88,4 +93,25 @@ CREATE TABLE dbo.Reviews (
 CREATE TABLE sales.Customers (
     CustomerId int NOT NULL CONSTRAINT PK_SalesCustomers PRIMARY KEY,
     Region nvarchar(50) NOT NULL);
+GO
+CREATE PROCEDURE dbo.GetOrders
+    @CustomerId int,
+    @From datetime2 = NULL,
+    @Status varchar(20) = 'New'
+AS
+SELECT o.OrderId, o.OrderDate, o.Status
+FROM dbo.Orders o
+WHERE o.CustomerId = @CustomerId
+  AND (@From IS NULL OR o.OrderDate >= @From)
+  AND o.Status = @Status;
+GO
+CREATE PROCEDURE dbo.CountOrders
+    @CustomerId int,
+    @Total int OUTPUT
+AS
+SELECT @Total = COUNT(*) FROM dbo.Orders WHERE CustomerId = @CustomerId;
+GO
+CREATE PROCEDURE dbo.PurgeOldOrders
+AS
+DELETE FROM dbo.Orders WHERE OrderDate < DATEADD(YEAR, -5, SYSUTCDATETIME());
 GO
