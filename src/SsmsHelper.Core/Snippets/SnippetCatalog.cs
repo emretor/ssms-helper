@@ -39,6 +39,9 @@ public sealed class SnippetCatalog
     {
         new Snippet("ssf", "SELECT * FROM $CURSOR$", "SELECT * FROM"),
         new Snippet("st100", "SELECT TOP (100) * FROM $CURSOR$", "SELECT TOP (100) * FROM"),
+        // The latest rows: ORDER BY 1 is the first column, usually the primary key (SSM-45). One line, so it runs
+        // with the caret on it (user request).
+        new Snippet("stl", "SELECT TOP (100) * FROM $CURSOR$ ORDER BY 1 DESC;", "SELECT TOP (100) * FROM ... ORDER BY 1 DESC"),
         new Snippet("scf", "SELECT COUNT(*) FROM $CURSOR$", "SELECT COUNT(*) FROM"),
         new Snippet("ii", "INSERT INTO $CURSOR$", "INSERT INTO"),
         // Caret on an indented line of its own for the table name or a query; WHERE always present as a reminder.

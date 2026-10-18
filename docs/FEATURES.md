@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.1, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.13.4, SSMS 22.
 
 - [Completion list](#completion-list)
 - [Snippets](#snippets)
@@ -54,7 +54,7 @@ type). It opens **right after the space**, without Ctrl+J:
   `UPDATE ... SET` and after `o.` names go in without a prefix.
 - **A space ends a name and opens the next list**: `SELECT * from` + space closes the keyword list and opens the
   table list.
-- **Snippets open it too**: `ssf`, `st100`, `scf`, `ii`, `upd`, `df` + Tab leave the caret where a table goes,
+- **Snippets open it too**: `ssf`, `st100`, `stl`, `scf`, `ii`, `upd`, `df` + Tab leave the caret where a table goes,
   and the list opens there.
 - **Picking a table after `INSERT INTO`** or **a procedure after `EXEC`** with Enter or Tab then runs the INSERT /
   EXEC helper as before (Shift+Enter gives the compact form).
@@ -73,6 +73,7 @@ Type a shortcut and press **Tab**.
 |---|---|
 | `ssf` | `SELECT * FROM ` |
 | `st100` | `SELECT TOP (100) * FROM ` |
+| `stl` | `SELECT TOP (100) * FROM  ORDER BY 1 DESC;` on one line, the caret after `FROM` for the table: the latest 100 rows (the first column is usually the primary key) |
 | `scf` | `SELECT COUNT(*) FROM ` |
 | `ii` | `INSERT INTO ` |
 | `upd` | `UPDATE`, an indented empty line for the caret, `SET`, `WHERE` |

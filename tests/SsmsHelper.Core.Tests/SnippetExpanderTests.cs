@@ -28,6 +28,13 @@ public class SnippetExpanderTests
     }
 
     [Fact]
+    public void Stl_LatestHundredRows_CaretAtTheTable()
+    {
+        Assert.Equal("SELECT TOP (100) * FROM | ORDER BY 1 DESC;", Expand("stl|"));
+        Assert.Equal("    SELECT TOP (100) * FROM | ORDER BY 1 DESC;", Expand("    stl|"));
+    }
+
+    [Fact]
     public void Shortcut_IsCaseInsensitive()
     {
         Assert.Equal("SELECT * FROM |", Expand("SSF|"));
