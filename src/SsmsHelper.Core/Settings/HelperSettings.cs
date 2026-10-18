@@ -38,6 +38,9 @@ public sealed record HelperSettings
     /// <summary>F12 scripts the object under the caret into a new query window.</summary>
     public bool ScriptObject { get; init; } = true;
 
+    /// <summary>Results grid right-click: Copy as INSERT (with and without identity).</summary>
+    public bool CopyAsInsert { get; init; } = true;
+
     /// <summary>Execute asks before running UPDATE or DELETE without WHERE.</summary>
     public bool WhereSafetyCheck { get; init; } = true;
 
@@ -62,6 +65,7 @@ public sealed record HelperSettings
         [nameof(StarExpansion)] = Format(StarExpansion),
         [nameof(ExecHelper)] = Format(ExecHelper),
         [nameof(ScriptObject)] = Format(ScriptObject),
+        [nameof(CopyAsInsert)] = Format(CopyAsInsert),
         [nameof(WhereSafetyCheck)] = Format(WhereSafetyCheck),
         [nameof(RefreshWithIntelliSense)] = Format(RefreshWithIntelliSense),
         [nameof(SchemaCacheMinutes)] = SchemaCacheMinutes.ToString(CultureInfo.InvariantCulture),
@@ -77,6 +81,7 @@ public sealed record HelperSettings
         StarExpansion = ReadBool(get, nameof(StarExpansion), Default.StarExpansion),
         ExecHelper = ReadBool(get, nameof(ExecHelper), Default.ExecHelper),
         ScriptObject = ReadBool(get, nameof(ScriptObject), Default.ScriptObject),
+        CopyAsInsert = ReadBool(get, nameof(CopyAsInsert), Default.CopyAsInsert),
         WhereSafetyCheck = ReadBool(get, nameof(WhereSafetyCheck), Default.WhereSafetyCheck),
         RefreshWithIntelliSense = ReadBool(get, nameof(RefreshWithIntelliSense), Default.RefreshWithIntelliSense),
         SchemaCacheMinutes = int.TryParse(get(nameof(SchemaCacheMinutes)), NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes)

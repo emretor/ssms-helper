@@ -18,6 +18,9 @@ namespace SsmsHelper.Editor;
 /// </summary>
 internal static class ExecuteGuard
 {
+    /// <summary>view.Properties key: the text the last Execute ran in that editor (for Copy as INSERT).</summary>
+    public const string ExecutedTextProperty = "SsmsHelper.ExecutedText";
+
     // SQLWorkbenchCommands.GUID_SQLEditorCommandSet / cmdidExecuteQuery in SQLEditors.dll.
     private const string SqlEditorCommandSet = "{52692960-56BC-4989-B5D3-94C47A513E8D}";
     private const int ExecuteQuery = 1;
@@ -59,12 +62,19 @@ internal static class ExecuteGuard
         try
         {
             var view = s_lastFocused;
-            if (!SettingsStore.Current.WhereSafetyCheck || view is null || view.IsClosed)
+            if (view is null || view.IsClosed)
             {
                 return;
             }
 
-            var writes = UnfilteredWriteDetector.Find(ExecutedText(view));
+            var text = ExecutedText(view);
+            view.Properties[ExecutedTextProperty] = text;
+            if (!SettingsStore.Current.WhereSafetyCheck)
+            {
+                return;
+            }
+
+            var writes = UnfilteredWriteDetector.Find(text);
             if (writes.Count > 0 && !Confirm(writes))
             {
                 cancelDefault = true;

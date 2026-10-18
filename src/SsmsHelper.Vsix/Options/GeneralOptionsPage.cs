@@ -55,6 +55,12 @@ public sealed class GeneralOptionsPage : DialogPage
     [DefaultValue(true)]
     public bool ScriptObject { get; set; } = true;
 
+    [Category(Helpers)]
+    [DisplayName("Copy as INSERT")]
+    [Description("Results grid right-click: Copy as INSERT puts INSERT statements for the selected cells on the clipboard, with identity values (SET IDENTITY_INSERT) or without identity columns.")]
+    [DefaultValue(true)]
+    public bool CopyAsInsert { get; set; } = true;
+
     [Category(Safety)]
     [DisplayName("Ask before UPDATE or DELETE without WHERE")]
     [Description("Execute (F5, Ctrl+E) asks for confirmation when the script has an UPDATE or DELETE without WHERE.")]
@@ -84,6 +90,7 @@ public sealed class GeneralOptionsPage : DialogPage
         StarExpansion = settings.StarExpansion;
         ExecHelper = settings.ExecHelper;
         ScriptObject = settings.ScriptObject;
+        CopyAsInsert = settings.CopyAsInsert;
         WhereSafetyCheck = settings.WhereSafetyCheck;
         RefreshWithIntelliSense = settings.RefreshWithIntelliSense;
         SchemaCacheMinutes = settings.SchemaCacheMinutes;
@@ -101,6 +108,7 @@ public sealed class GeneralOptionsPage : DialogPage
             StarExpansion = StarExpansion,
             ExecHelper = ExecHelper,
             ScriptObject = ScriptObject,
+            CopyAsInsert = CopyAsInsert,
             WhereSafetyCheck = WhereSafetyCheck,
             RefreshWithIntelliSense = RefreshWithIntelliSense,
             SchemaCacheMinutes = SchemaCacheMinutes,

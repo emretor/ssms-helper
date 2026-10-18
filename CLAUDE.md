@@ -196,6 +196,27 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - F12 is a vsct KeyBinding (global scope) on `Tools.SSMSHelperScriptObject`; the command filter also maps VSStd97
   GotoDefn (Edit.GoToDefinition) to the same action in case SSMS's scheme binds F12 to that.
 
+## Copy as INSERT notes (SSM-44)
+
+- Core `Results/`: `SqlLiteral` (typed values, SqlTypes unwrapped, display strings by server type; spaced dates get
+  a `T` because DATEFORMAT dmy reads 'yyyy-mm-dd hh:mm' as year-day-month), `ResultInsertScripter` (1000 rows per
+  INSERT, IDENTITY_INSERT only when an identity column is included), `ResultSourceFinder` (result-returning SELECTs
+  of the executed text matched to grids in order), `InsertTarget` (schema check, placeholder `[TargetTable]`).
+- Vsix `Results/ResultsGridReader` walks SSMS internals by reflection only (no compile reference):
+  doc view (SqlScriptEditorControl) `.m_sqlResultsControl.m_gridResultsPage` -> `FocusedGrid`, `GetResultSet(i)`.
+  `GridControl.SelectedCells` returns UI column indexes for block selections; map with
+  `GetStorageColumnIndexByUIIndex`. In grid mode `QEResultSet.GetCellData(row, storage)` takes data index + 1
+  (column 0 is the row number); `GetSchemaRow` and `GetServerDataTypeName` take the data index. Numbers come as
+  SqlTypes; other values fall back to `GetCellDataAsString`, as SSMS's own JSON exporter does.
+  Decompiled with `ilspycmd` from SQLEditors.dll / Microsoft.SqlServer.GridControl.dll; re-check after SSMS updates.
+- The menu group is parented to `{33F13AC3-80BB-4ecb-85BC-225435603A5E}`:112: SSMS shows `IDM_SQLWB_SQLRESGRID_CONTEXT`
+  under `GUID_SQLEditorGroup`, not the command set GUID `{52692960-...}` (the first try used that and showed
+  nothing). Bump the `ProvideMenuResource` version whenever menu placement changes, so SSMS rebuilds its menu cache.
+- `ExecuteGuard` stores each Execute's text in `view.Properties[ExecutedTextProperty]` for the source table.
+- The first copy per session logs columns, value types and the schema table's columns to the activity log.
+- Python edits of repo files: open with `encoding='utf-8'`. The default cp1252 cannot write characters such as the
+  arrow in this file, and a failed write leaves the file empty.
+
 ## WHERE safety check notes
 
 - `Core/Safety/UnfilteredWriteDetector`: one tokenizer pass, then a forward scan per UPDATE/DELETE keyword until

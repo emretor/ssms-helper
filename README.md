@@ -14,6 +14,7 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 - **Surround with Transaction**: wraps the selection in BEGIN TRANSACTION ... ROLLBACK (COMMIT commented out).
 - **F12**: opens the ALTER script of a procedure, view or function, or the CREATE script of a table, in a new window.
 - **WHERE safety check**: Execute asks before running an `UPDATE` or `DELETE` without `WHERE`.
+- **Copy as INSERT**: right-click selected rows in the results grid to copy them as `INSERT ... VALUES` statements.
 - **EXEC helper**: `EXEC dbo.Procedure` + Tab lists its parameters with empty values and their types.
 
 Everywhere: Tab gives the default (wide) form, Shift+Enter the compact one.

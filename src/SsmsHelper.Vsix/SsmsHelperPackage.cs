@@ -13,8 +13,8 @@ namespace SsmsHelper;
 /// Editor features will be MEF components and load independently of this package.
 /// </summary>
 [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-[InstalledProductRegistration("SSMS Helper", "Snippets and code helpers for SSMS", "0.11.4")]
-[ProvideMenuResource("Menus.ctmenu", 1)]
+[InstalledProductRegistration("SSMS Helper", "Snippets and code helpers for SSMS", "0.12.1")]
+[ProvideMenuResource("Menus.ctmenu", 2)]
 [ProvideOptionPage(typeof(GeneralOptionsPage), "SSMS Helper", "General", 0, 0, true)]
 [Guid(PackageIds.PackageGuidString)]
 public sealed class SsmsHelperPackage : AsyncPackage
@@ -27,5 +27,6 @@ public sealed class SsmsHelperPackage : AsyncPackage
         await SuggestJoinCommand.InitializeAsync(this);
         await ScriptObjectCommand.InitializeAsync(this);
         await SurroundTransactionCommand.InitializeAsync(this);
+        await CopyAsInsertCommand.InitializeAsync(this);
     }
 }

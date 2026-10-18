@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.11.4, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.12.1, SSMS 22.
 
 - [Completion list](#completion-list)
 - [Snippets](#snippets)
@@ -9,6 +9,7 @@ What every feature does, how to trigger it, and what to expect. Version 0.11.4, 
 - [Expand SELECT *](#expand-select-)
 - [EXEC helper](#exec-helper)
 - [F12: script the object](#f12-script-the-object)
+- [Copy as INSERT](#copy-as-insert)
 - [WHERE safety check](#where-safety-check)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
 - [Options](#options)
@@ -353,6 +354,47 @@ Nothing is executed; edit and run the script yourself. Details:
 - Cost: one small query per F12, plus SMO for tables (about half a second the first time, then faster). Nothing
   runs while you type.
 
+## Copy as INSERT
+
+Select cells in a query's results grid, right-click and pick one of:
+
+| Menu item | Identity columns |
+|---|---|
+| **Copy as INSERT** | Kept with their values, inside `SET IDENTITY_INSERT ... ON` / `OFF`, so the copy keeps the same IDs |
+| **Copy as INSERT (without identity)** | Left out; the target table generates new IDs |
+
+The clipboard gets `INSERT ... VALUES` with one row per line:
+
+```sql
+SET IDENTITY_INSERT dbo.Orders ON;
+
+INSERT INTO dbo.Orders (OrderId, CustomerId, OrderDate, Status)
+VALUES
+    (1, 1, '2026-10-18T14:05:09.120', N'New'),
+    (2, 3, '2026-10-18T15:00:00', NULL);
+
+SET IDENTITY_INSERT dbo.Orders OFF;
+```
+
+- **Which cells**: the selected rows and the selected columns, in the order the grid shows them. Select whole rows
+  (click the row numbers) for all columns, or a block of cells for just those columns.
+- **Values** are written for their type: `NULL`, numbers as they are, `N'...'` for Unicode text and `'...'` for
+  varchar, dates in ISO format (`'2026-10-18T14:05:09.120'`, safe under any language or DATEFORMAT), `0x...` for
+  binary.
+- **The table name** comes from the query that produced the grid when it is a SELECT from one table (no JOIN, no
+  UNION, no derived table), and the table has every selected column. With several result grids, the grids are
+  matched to the script's SELECT statements in order. Otherwise the INSERT says `[TargetTable]`: replace it after
+  pasting. A `#temp` table or a three-part name (`Archive.dbo.Orders`) is used as written.
+- **Never inserted**: computed, rowversion and GENERATED ALWAYS (temporal) columns are left out. The status bar
+  lists what was left out.
+- More than 1000 rows are split into several INSERT statements (the T-SQL limit per VALUES list); at most 50,000
+  rows per copy.
+- Long text is copied as the grid holds it: SSMS keeps at most "Maximum Characters Retrieved" per cell (Tools >
+  Options > Query Results > SQL Server > Results to Grid, 65,535 by default), so longer values arrive cut off.
+- Turn it off under [Options](#options) (**Copy as INSERT**); the menu items then disappear.
+- Cost: nothing until you click it. The grid is read through SSMS internals; if an SSMS update changes them,
+  the status bar says it cannot read the grid, and nothing else is affected.
+
 ## WHERE safety check
 
 When you execute (F5, Ctrl+E or the Execute button) a script with an `UPDATE` or `DELETE` that has no `WHERE`,
@@ -408,6 +450,7 @@ This changes every row. Run anyway?
 | Expand SELECT * | On | Tab / Shift+Enter right after the `*` |
 | EXEC helper | On | Tab / Shift+Enter / IntelliSense pick after `EXEC procedure` |
 | F12 scripts the object | On | F12 opens the ALTER / CREATE script in a new window |
+| Copy as INSERT | On | The two Copy as INSERT items on the results grid's right-click menu |
 | Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
 | Ctrl+Shift+R also reloads the schema | On | SSMS's Refresh Local Cache reloads our schema too |
 | Schema cache minutes | 30 | How long a loaded schema is used before a background refresh (1 to 1440) |
@@ -423,6 +466,9 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 | SSMS Helper: Surround with Transaction | Ctrl+K, Ctrl+T: wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK |
 | SSMS Helper: Refresh Schema | Reloads the current database's schema |
 | SSMS Helper: About | Shows the extension version, the SSMS version and the .NET runtime |
+
+On the **results grid's right-click menu**: Copy as INSERT and Copy as INSERT (without identity) (keyboard
+names `Tools.SSMSHelperCopyAsInsert`, `Tools.SSMSHelperCopyAsInsertWithoutIdentity`).
 
 Bind a shortcut under **Tools > Options > Environment > Keyboard**: search for `SSMSHelper`.
 
@@ -453,6 +499,10 @@ All messages start with `SSMS Helper:`.
 | `<name> is not a table, view, procedure, function or trigger in this database.` | F12: nothing with that name |
 | `<name> is encrypted or you lack VIEW DEFINITION; ...` | F12: no source available |
 | `wrapped in a transaction that rolls back; ...` | Surround with Transaction done |
+| `copied <n> row(s) as INSERT into <table>.` | Copy as INSERT done; also lists left-out columns |
+| `... Table unknown: replace [TargetTable] after pasting.` | Copy as INSERT could not tell the source table |
+| `click into a results grid first.` | Copy as INSERT used without a focused results grid |
+| `cannot read ... from this SSMS version. ...` | Copy as INSERT: SSMS changed its grid; please report it |
 | `execution cancelled.` | You chose Cancel in the WHERE safety check |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
 | `the query window is not connected to a database.` | Suggest Join command in a disconnected window |

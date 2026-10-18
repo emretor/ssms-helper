@@ -15,4 +15,6 @@ internal static class PackageIds
     public const int SuggestJoinCommandId = 0x0102;
     public const int ScriptObjectCommandId = 0x0103;
     public const int SurroundTransactionCommandId = 0x0104;
+    public const int CopyAsInsertCommandId = 0x0105;
+    public const int CopyAsInsertWithoutIdentityCommandId = 0x0106;
 }

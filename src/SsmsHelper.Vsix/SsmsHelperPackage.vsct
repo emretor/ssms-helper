@@ -8,6 +8,12 @@
       <Group guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
       </Group>
+
+      <!-- The SQL results grid's right-click menu: SQLEditors.dll shows menu 112 (IDM_SQLWB_SQLRESGRID_CONTEXT)
+           under GUID_SQLEditorGroup, not under the command set GUID (CommonUtils.DisplayPopupMenu). -->
+      <Group guid="guidSsmsHelperCmdSet" id="ResultsGridMenuGroup" priority="0x0700">
+        <Parent guid="guidSqlEditorGroup" id="IDM_SQLWB_SQLRESGRID_CONTEXT" />
+      </Group>
     </Groups>
 
     <Buttons>
@@ -35,6 +41,26 @@
           <ButtonText>SSMS Helper: Surround with Transaction</ButtonText>
           <CanonicalName>.Tools.SSMSHelperSurroundWithTransaction</CanonicalName>
           <LocCanonicalName>.Tools.SSMSHelperSurroundWithTransaction</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidCopyAsInsert" priority="0x0010" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="ResultsGridMenuGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Copy as INSERT</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperCopyAsInsert</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperCopyAsInsert</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidCopyAsInsertWithoutIdentity" priority="0x0020" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="ResultsGridMenuGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Copy as INSERT (without identity)</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperCopyAsInsertWithoutIdentity</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperCopyAsInsertWithoutIdentity</LocCanonicalName>
         </Strings>
       </Button>
 
@@ -68,6 +94,12 @@
       <IDSymbol name="cmdidSuggestJoin" value="0x0102" />
       <IDSymbol name="cmdidScriptObject" value="0x0103" />
       <IDSymbol name="cmdidSurroundTransaction" value="0x0104" />
+      <IDSymbol name="cmdidCopyAsInsert" value="0x0105" />
+      <IDSymbol name="cmdidCopyAsInsertWithoutIdentity" value="0x0106" />
+      <IDSymbol name="ResultsGridMenuGroup" value="0x1030" />
+    </GuidSymbol>
+    <GuidSymbol name="guidSqlEditorGroup" value="{33F13AC3-80BB-4ecb-85BC-225435603A5E}">
+      <IDSymbol name="IDM_SQLWB_SQLRESGRID_CONTEXT" value="112" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
