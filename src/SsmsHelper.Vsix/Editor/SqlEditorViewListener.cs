@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using SsmsHelper.Core.Snippets;
+using SsmsHelper.Options;
 
 namespace SsmsHelper.Editor;
 
@@ -75,6 +76,9 @@ internal sealed class SqlEditorViewListener : IVsTextViewCreationListener
             }
 
             ExecuteGuard.Attach(view);
+
+            // Read the settings now, on the UI thread, so the first key already uses them.
+            _ = SettingsStore.Current;
         }
         catch (Exception ex)
         {

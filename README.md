@@ -9,6 +9,7 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 - **Expand `*`**: Tab right after the `*` in `SELECT * FROM ...` replaces it with the column list, one per line;
   Shift+Enter writes the compact form.
 
+- **Options**: Tools > Options > SSMS Helper turns each helper on or off and sets the schema cache time.
 - **WHERE safety check**: Execute asks before running an `UPDATE` or `DELETE` without `WHERE`.
 - **EXEC helper**: `EXEC dbo.Procedure` + Tab lists its parameters with empty values and their types.
 

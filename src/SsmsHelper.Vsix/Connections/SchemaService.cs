@@ -3,14 +3,15 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using SsmsHelper.Core.Metadata;
+using SsmsHelper.Core.Settings;
 
 namespace SsmsHelper.Connections;
 
 /// <summary>Process-wide schema cache shared by all query windows and helpers.</summary>
 internal static class SchemaService
 {
-    /// <summary>Entries older than this are refreshed in the background on next use.</summary>
-    public static readonly TimeSpan TimeToLive = TimeSpan.FromMinutes(30);
+    /// <summary>Until the settings are read; then Options > Schema cache minutes (SettingsStore sets the cache's TTL).</summary>
+    private static readonly TimeSpan DefaultTimeToLive = TimeSpan.FromMinutes(HelperSettings.DefaultSchemaCacheMinutes);
 
     private static readonly ConcurrentDictionary<DatabaseKey, Func<System.Data.Common.DbConnection>> s_connectionFactories = new();
 
@@ -28,7 +29,7 @@ internal static class SchemaService
 
     private static SchemaCache CreateCache()
     {
-        var cache = new SchemaCache(LoadAsync, TimeToLive);
+        var cache = new SchemaCache(LoadAsync, DefaultTimeToLive);
         cache.LoadFailed += (key, ex) => Log.Error($"Loading schema for {key} failed.", ex);
         return cache;
     }

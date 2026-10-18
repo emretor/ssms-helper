@@ -164,6 +164,17 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - The executed text comes from the last focused SQL view (selection or whole buffer), so Execute from the toolbar
   or results grid checks the right editor. Any exception is logged and execution goes ahead.
 
+## Options notes
+
+- `Core/Settings/HelperSettings`: immutable record, string values in and out (`ToValues`/`FromValues`), bad or
+  missing values fall back to defaults, `Normalized` clamps ranges. Add new settings here first, with tests.
+- `Vsix/Options/SettingsStore`: collection "SsmsHelper" in the user settings store. `Current` is a field read
+  (checked on every key); loaded on the first SQL view, outside the package, because the package loads on demand.
+  `Save` applies at once (including `SchemaService.Cache.TimeToLive`).
+- `GeneralOptionsPage` (DialogPage, `ProvideOptionPage` on the package) overrides Load/SaveSettingsToStorage to
+  use `SettingsStore`, not the DialogPage registry path. Opening Tools > Options loads the package.
+- Every new helper gets a setting and a row in the FEATURES.md Options table.
+
 ## INSERT helper notes
 
 - `InsertContextAnalyzer` reads tokens backwards from the caret ("INSERT [INTO] name [(cols)]" then only whitespace),

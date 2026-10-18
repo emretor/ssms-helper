@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using SsmsHelper.Core.Safety;
+using SsmsHelper.Options;
 
 namespace SsmsHelper.Editor;
 
@@ -58,7 +59,7 @@ internal static class ExecuteGuard
         try
         {
             var view = s_lastFocused;
-            if (view is null || view.IsClosed)
+            if (!SettingsStore.Current.WhereSafetyCheck || view is null || view.IsClosed)
             {
                 return;
             }

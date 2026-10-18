@@ -72,7 +72,8 @@ internal sealed class JoinSuggestionController
     }
 
     /// <summary>Runs after SSMS handled a command: refilters an open popup or auto-opens after "ON ".</summary>
-    public void PostprocessCommand(EditorKey key, char? typed)
+    /// <param name="autoOpen">False when the user turned automatic opening off; an open popup still refilters.</param>
+    public void PostprocessCommand(EditorKey key, char? typed, bool autoOpen)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -91,7 +92,7 @@ internal sealed class JoinSuggestionController
             return;
         }
 
-        if (key == EditorKey.TypeChar && typed == ' ' && MayEndJoinHeader())
+        if (autoOpen && key == EditorKey.TypeChar && typed == ' ' && MayEndJoinHeader())
         {
             var context = Analyze();
             if (JoinPopupRules.ShouldAutoOpen(context))

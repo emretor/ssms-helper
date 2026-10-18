@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.8.2, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.9.0, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
@@ -9,6 +9,7 @@ What every feature does, how to trigger it, and what to expect. Version 0.8.2, S
 - [EXEC helper](#exec-helper)
 - [WHERE safety check](#where-safety-check)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
+- [Options](#options)
 - [Menu commands and shortcuts](#menu-commands-and-shortcuts)
 - [Status bar messages](#status-bar-messages)
 - [Limitations](#limitations)
@@ -292,11 +293,11 @@ This changes every row. Run anyway?
   such as `ON DELETE CASCADE`, `GRANT UPDATE`, `MERGE ... THEN DELETE`, `UPDATE STATISTICS`.
 - `WHERE CURRENT OF cursor` counts as a `WHERE`. A `WHERE 1 = 1` is not questioned.
 - Text in strings and comments is ignored, so dynamic SQL (`EXEC (@sql)`) is not checked.
-- It cannot be turned off yet; that comes with the settings page (SSM-12).
+- Turn it off under [Options](#options): **Ask before UPDATE or DELETE without WHERE**.
 
 
 - Tables, views, columns, keys, foreign keys and stored procedures (with parameters) of the window's database are loaded in the background the first
-  time a helper needs them, and kept for 30 minutes. After that they are reloaded in the background while the old
+  time a helper needs them, and kept for 30 minutes (change it under [Options](#options)). After that they are reloaded in the background while the old
   copy keeps working.
 - The first use on a new database may show `loading schema for ...` in the status bar. The JOIN list then opens
   when loading finishes. For INSERT the first Tab waits for the load; the first IntelliSense pick only completes
@@ -305,6 +306,22 @@ This changes every row. Run anyway?
   SSMS's own IntelliSense has a separate cache: refresh it with Ctrl+Shift+R.
 - The extension opens its own connection with the window's credentials. It never runs anything in your query
   window's session.
+
+## Options
+
+**Tools > Options > SSMS Helper > General.** Changes apply at once, also in open query windows.
+
+| Setting | Default | What it switches |
+|---|---|---|
+| Snippets | On | Tab expands `ssf`, `ii`, `upd`, `df`, `bt`, ... |
+| JOIN list opens automatically | On | The ON list after `JOIN table alias ` and `ON `. Off: use the Suggest Join command |
+| INSERT helper | On | Tab / Shift+Enter / IntelliSense pick after `INSERT INTO table` |
+| Expand SELECT * | On | Tab / Shift+Enter right after the `*` |
+| EXEC helper | On | Tab / Shift+Enter / IntelliSense pick after `EXEC procedure` |
+| Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
+| Schema cache minutes | 30 | How long a loaded schema is used before a background refresh (1 to 1440) |
+
+A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter starts a new line.
 
 ## Menu commands and shortcuts
 
@@ -351,7 +368,7 @@ All messages start with `SSMS Helper:`.
 
 ## Troubleshooting
 
-- Nothing happens: check the window is connected and the database dropdown shows the right database; run
+- Nothing happens: check the helper is on under [Options](#options), the window is connected and the database dropdown shows the right database; run
   Refresh Schema.
 - To see what the extension logs, start SSMS with `Ssms.exe /log`, reproduce the problem, close SSMS and look for
   `SsmsHelper` in `%AppData%\Microsoft\SSMS\22.0_<id>\ActivityLog.xml`.

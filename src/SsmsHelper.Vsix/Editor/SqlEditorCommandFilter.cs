@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using SsmsHelper.Core.Editor;
 using SsmsHelper.Core.Snippets;
+using SsmsHelper.Options;
 
 namespace SsmsHelper.Editor;
 
@@ -80,6 +81,7 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         var shiftOnly = key == EditorKey.Return && IsShiftOnly();
 
         // Order matters: an open JOIN popup, then INSERT, SELECT * and EXEC (Tab, Shift+Enter), then snippets (Tab).
+        var settings = SettingsStore.Current;
         if (isEditorCommand)
         {
             if (SafeInvoke(() => Joins.PreprocessCommand(key)))
@@ -87,29 +89,29 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
                 return VSConstants.S_OK;
             }
 
-            if (InsertKeyRules.BeforeKey(key, shiftOnly) is { } insertLayout && SafeInvoke(() => Inserts.TryTrigger(insertLayout)))
+            if (settings.InsertHelper && InsertKeyRules.BeforeKey(key, shiftOnly) is { } insertLayout && SafeInvoke(() => Inserts.TryTrigger(insertLayout)))
             {
                 return VSConstants.S_OK;
             }
 
-            if (StarKeyRules.BeforeKey(key, shiftOnly) is { } starLayout && SafeInvoke(() => Stars.TryTrigger(starLayout)))
+            if (settings.StarExpansion && StarKeyRules.BeforeKey(key, shiftOnly) is { } starLayout && SafeInvoke(() => Stars.TryTrigger(starLayout)))
             {
                 return VSConstants.S_OK;
             }
 
-            if (ExecKeyRules.BeforeKey(key, shiftOnly) is { } execLayout && SafeInvoke(() => Execs.TryTrigger(execLayout)))
+            if (settings.ExecHelper && ExecKeyRules.BeforeKey(key, shiftOnly) is { } execLayout && SafeInvoke(() => Execs.TryTrigger(execLayout)))
             {
                 return VSConstants.S_OK;
             }
 
-            if (key == EditorKey.Tab && SafeInvoke(TryExpandSnippet))
+            if (settings.Snippets && key == EditorKey.Tab && SafeInvoke(TryExpandSnippet))
             {
                 return VSConstants.S_OK;
             }
         }
 
         var typed = key == EditorKey.TypeChar ? GetTypedChar(pvaIn) : null;
-        var isCommitKey = InsertKeyRules.MayCommitCompletion(key);
+        var isCommitKey = (settings.InsertHelper || settings.ExecHelper) && InsertKeyRules.MayCommitCompletion(key);
         var layout = InsertKeyRules.AfterKeyLayout(key, shiftOnly);
         var execAfterLayout = ExecKeyRules.AfterKeyLayout(key, shiftOnly);
         var beforeKey = isCommitKey ? Inserts.CaptureBeforeKey() : default;
@@ -122,11 +124,18 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
                 // Enter or Tab may have committed an IntelliSense name after "INSERT INTO" or "EXEC".
                 if (isCommitKey)
                 {
-                    Inserts.AfterKey(beforeKey, layout);
-                    Execs.AfterKey(beforeKey, execAfterLayout);
+                    if (settings.InsertHelper)
+                    {
+                        Inserts.AfterKey(beforeKey, layout);
+                    }
+
+                    if (settings.ExecHelper)
+                    {
+                        Execs.AfterKey(beforeKey, execAfterLayout);
+                    }
                 }
 
-                Joins.PostprocessCommand(key, typed);
+                Joins.PostprocessCommand(key, typed, settings.JoinAutoOpen);
                 return true;
             });
         }
