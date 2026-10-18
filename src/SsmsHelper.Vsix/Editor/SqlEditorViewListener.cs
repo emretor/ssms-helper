@@ -76,6 +76,7 @@ internal sealed class SqlEditorViewListener : IVsTextViewCreationListener
             }
 
             ExecuteGuard.Attach(view);
+            IntelliSenseRefreshHook.Attach();
 
             // Read the settings now, on the UI thread, so the first key already uses them.
             _ = SettingsStore.Current;

@@ -173,6 +173,10 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   `Save` applies at once (including `SchemaService.Cache.TimeToLive`).
 - `GeneralOptionsPage` (DialogPage, `ProvideOptionPage` on the package) overrides Load/SaveSettingsToStorage to
   use `SettingsStore`, not the DialogPage registry path. Opening Tools > Options loads the package.
+- `IntelliSenseRefreshHook`: DTE `AfterExecute` on SSMS's Refresh Local Cache (RadLangSvc `Commands.RefreshLocalCache`
+  = 70; looked up as {52692960-...}/70 and checked by name, then by `Edit.RefreshLocalCache`; the activity log says
+  which). Uses `SchemaCache.ReloadAsync`, which keeps the old schema serving while it loads.
+- Automatic change detection (SSM-52) is postponed over the performance concern: do not add recurring queries.
 - Every new helper gets a setting and a row in the FEATURES.md Options table.
 
 ## INSERT helper notes

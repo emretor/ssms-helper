@@ -50,6 +50,12 @@ public sealed class GeneralOptionsPage : DialogPage
     public bool WhereSafetyCheck { get; set; } = true;
 
     [Category(Schema)]
+    [DisplayName("Ctrl+Shift+R also reloads the schema")]
+    [Description("SSMS's Refresh Local Cache (Edit > IntelliSense, Ctrl+Shift+R) also reloads the SSMS Helper schema of the window's database.")]
+    [DefaultValue(true)]
+    public bool RefreshWithIntelliSense { get; set; } = true;
+
+    [Category(Schema)]
     [DisplayName("Schema cache minutes")]
     [Description("How long a loaded schema is used before it is refreshed in the background (1 to 1440). Refresh Schema reloads at once.")]
     [DefaultValue(HelperSettings.DefaultSchemaCacheMinutes)]
@@ -65,6 +71,7 @@ public sealed class GeneralOptionsPage : DialogPage
         StarExpansion = settings.StarExpansion;
         ExecHelper = settings.ExecHelper;
         WhereSafetyCheck = settings.WhereSafetyCheck;
+        RefreshWithIntelliSense = settings.RefreshWithIntelliSense;
         SchemaCacheMinutes = settings.SchemaCacheMinutes;
     }
 
@@ -79,6 +86,7 @@ public sealed class GeneralOptionsPage : DialogPage
             StarExpansion = StarExpansion,
             ExecHelper = ExecHelper,
             WhereSafetyCheck = WhereSafetyCheck,
+            RefreshWithIntelliSense = RefreshWithIntelliSense,
             SchemaCacheMinutes = SchemaCacheMinutes,
         });
 

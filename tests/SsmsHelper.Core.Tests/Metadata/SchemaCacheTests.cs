@@ -132,6 +132,40 @@ public class SchemaCacheTests
     }
 
     [Fact]
+    public async Task ReloadAsync_LoadsAgain_WhileTheOldSchemaKeepsServing()
+    {
+        var loads = 0;
+        var gate = new TaskCompletionSource<DatabaseSchema>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cache = new SchemaCache((_, _) => ++loads == 1 ? Task.FromResult(Schema()) : gate.Task, Ttl, () => _now);
+        var old = await cache.GetAsync(Key, Ct);
+
+        var reloading = cache.ReloadAsync(Key, Ct);
+        Assert.False(reloading.IsCompleted);
+        Assert.Same(old, cache.TryGet(Key));
+
+        var fresh = Schema();
+        gate.SetResult(fresh);
+        Assert.Same(fresh, await reloading);
+        Assert.Same(fresh, cache.TryGet(Key));
+        Assert.Equal(2, loads);
+    }
+
+    [Fact]
+    public async Task ReloadAsync_JoinsALoadAlreadyRunning()
+    {
+        var loads = 0;
+        var gate = new TaskCompletionSource<DatabaseSchema>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cache = new SchemaCache((_, _) => { Interlocked.Increment(ref loads); return gate.Task; }, Ttl, () => _now);
+
+        var first = cache.GetAsync(Key, Ct);
+        var reload = cache.ReloadAsync(Key, Ct);
+        gate.SetResult(Schema());
+
+        Assert.Same(await first, await reload);
+        Assert.Equal(1, loads);
+    }
+
+    [Fact]
     public async Task GetAsync_CanBeCancelled_WithoutCancellingTheSharedLoad()
     {
         var gate = new TaskCompletionSource<DatabaseSchema>(TaskCreationOptions.RunContinuationsAsynchronously);

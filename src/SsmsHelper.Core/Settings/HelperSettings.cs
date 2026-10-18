@@ -35,6 +35,9 @@ public sealed record HelperSettings
     /// <summary>Execute asks before running UPDATE or DELETE without WHERE.</summary>
     public bool WhereSafetyCheck { get; init; } = true;
 
+    /// <summary>SSMS's Refresh Local Cache (Ctrl+Shift+R) also reloads the SSMS Helper schema.</summary>
+    public bool RefreshWithIntelliSense { get; init; } = true;
+
     /// <summary>Minutes before a loaded schema is refreshed in the background, kept within 1 minute and 1 day.</summary>
     public int SchemaCacheMinutes { get; init; } = DefaultSchemaCacheMinutes;
 
@@ -52,6 +55,7 @@ public sealed record HelperSettings
         [nameof(StarExpansion)] = Format(StarExpansion),
         [nameof(ExecHelper)] = Format(ExecHelper),
         [nameof(WhereSafetyCheck)] = Format(WhereSafetyCheck),
+        [nameof(RefreshWithIntelliSense)] = Format(RefreshWithIntelliSense),
         [nameof(SchemaCacheMinutes)] = SchemaCacheMinutes.ToString(CultureInfo.InvariantCulture),
     };
 
@@ -64,6 +68,7 @@ public sealed record HelperSettings
         StarExpansion = ReadBool(get, nameof(StarExpansion), Default.StarExpansion),
         ExecHelper = ReadBool(get, nameof(ExecHelper), Default.ExecHelper),
         WhereSafetyCheck = ReadBool(get, nameof(WhereSafetyCheck), Default.WhereSafetyCheck),
+        RefreshWithIntelliSense = ReadBool(get, nameof(RefreshWithIntelliSense), Default.RefreshWithIntelliSense),
         SchemaCacheMinutes = int.TryParse(get(nameof(SchemaCacheMinutes)), NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes)
             ? minutes
             : Default.SchemaCacheMinutes,

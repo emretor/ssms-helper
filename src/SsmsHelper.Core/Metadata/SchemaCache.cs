@@ -92,6 +92,21 @@ public sealed class SchemaCache
         return GetAsync(key, cancellationToken);
     }
 
+    /// <summary>
+    /// Loads the schema again while the current one keeps serving <see cref="TryGet"/>, so helpers never wait.
+    /// Joins a load already running instead of starting a second one.
+    /// </summary>
+    public Task<DatabaseSchema> ReloadAsync(DatabaseKey key, CancellationToken cancellationToken = default)
+    {
+        Task<DatabaseSchema> pending;
+        lock (_gate)
+        {
+            pending = StartLoad(key, GetOrAddEntry(key));
+        }
+
+        return WaitAsync(pending, cancellationToken);
+    }
+
     /// <summary>Drops the entry. A load already running still completes but its result is discarded.</summary>
     public void Invalidate(DatabaseKey key)
     {

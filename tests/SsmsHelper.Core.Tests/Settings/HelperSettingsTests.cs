@@ -14,6 +14,7 @@ public class HelperSettingsTests
         Assert.True(settings.StarExpansion);
         Assert.True(settings.ExecHelper);
         Assert.True(settings.WhereSafetyCheck);
+        Assert.True(settings.RefreshWithIntelliSense);
         Assert.Equal(30, settings.SchemaCacheMinutes);
     }
 
@@ -26,7 +27,7 @@ public class HelperSettingsTests
     [Fact]
     public void RoundTrips()
     {
-        var settings = new HelperSettings { Snippets = false, ExecHelper = false, WhereSafetyCheck = false, SchemaCacheMinutes = 90 };
+        var settings = new HelperSettings { Snippets = false, ExecHelper = false, WhereSafetyCheck = false, RefreshWithIntelliSense = false, SchemaCacheMinutes = 90 };
         var values = settings.ToValues();
         Assert.Equal(settings, HelperSettings.FromValues(name => values.TryGetValue(name, out var v) ? v : null));
     }

@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.9.0, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.9.1, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
@@ -302,8 +302,12 @@ This changes every row. Run anyway?
 - The first use on a new database may show `loading schema for ...` in the status bar. The JOIN list then opens
   when loading finishes. For INSERT the first Tab waits for the load; the first IntelliSense pick only completes
   the name (press Tab again).
-- **Tools > SSMS Helper: Refresh Schema** reloads the current database now, for example after creating a table.
-  SSMS's own IntelliSense has a separate cache: refresh it with Ctrl+Shift+R.
+- **Ctrl+Shift+R** (SSMS's Edit > IntelliSense > Refresh Local Cache) refreshes SSMS's IntelliSense and also
+  reloads the SSMS Helper schema of the window's database, for example after creating a table or a column. The
+  helpers keep using the old schema until the new one has loaded (`schema for <server>/<db> loaded.`). Turn it off
+  under [Options](#options).
+- **Tools > SSMS Helper: Refresh Schema** reloads only the SSMS Helper schema and reports the counts.
+- Schema changes are not detected automatically (SSM-52, postponed): after changing the schema, press Ctrl+Shift+R.
 - The extension opens its own connection with the window's credentials. It never runs anything in your query
   window's session.
 
@@ -319,6 +323,7 @@ This changes every row. Run anyway?
 | Expand SELECT * | On | Tab / Shift+Enter right after the `*` |
 | EXEC helper | On | Tab / Shift+Enter / IntelliSense pick after `EXEC procedure` |
 | Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
+| Ctrl+Shift+R also reloads the schema | On | SSMS's Refresh Local Cache reloads our schema too |
 | Schema cache minutes | 30 | How long a loaded schema is used before a background refresh (1 to 1440) |
 
 A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter starts a new line.
@@ -334,7 +339,7 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 Bind a shortcut under **Tools > Options > Environment > Keyboard**: search for `SSMSHelper`.
 
 Useful SSMS shortcuts alongside: **Ctrl+J** lists members (IntelliSense list at the caret), **Ctrl+Space**
-completes the word (inserts a single match directly), **Ctrl+Shift+R** refreshes SSMS's IntelliSense cache.
+completes the word (inserts a single match directly), **Ctrl+Shift+R** refreshes SSMS's IntelliSense cache and the SSMS Helper schema.
 
 ## Status bar messages
 
@@ -343,6 +348,7 @@ All messages start with `SSMS Helper:`.
 | Message | Meaning |
 |---|---|
 | `loading schema for <server>/<db> ...` | First use on this database; wait a moment |
+| `reloading schema for <server>/<db>...` | After Ctrl+Shift+R; the old schema keeps working meanwhile |
 | `schema for <server>/<db> loaded.` | Loading finished |
 | `loading schema for ... failed: ...` | The extension could not read the catalog (permissions, connection) |
 | `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database |
