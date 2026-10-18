@@ -29,6 +29,15 @@
         </Strings>
       </Button>
 
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidSurroundTransaction" priority="0x0088" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>SSMS Helper: Surround with Transaction</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperSurroundWithTransaction</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperSurroundWithTransaction</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="guidSsmsHelperCmdSet" id="cmdidRefreshSchema" priority="0x0090" type="Button">
         <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
         <Strings>
@@ -57,6 +66,7 @@
       <IDSymbol name="cmdidRefreshSchema" value="0x0101" />
       <IDSymbol name="cmdidSuggestJoin" value="0x0102" />
       <IDSymbol name="cmdidScriptObject" value="0x0103" />
+      <IDSymbol name="cmdidSurroundTransaction" value="0x0104" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

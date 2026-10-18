@@ -14,4 +14,5 @@ internal static class PackageIds
     public const int RefreshSchemaCommandId = 0x0101;
     public const int SuggestJoinCommandId = 0x0102;
     public const int ScriptObjectCommandId = 0x0103;
+    public const int SurroundTransactionCommandId = 0x0104;
 }

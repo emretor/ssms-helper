@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.10.0, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.10.1, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
@@ -56,6 +56,29 @@ reminder not to run an UPDATE or DELETE on the whole table.
   name such as `dbo.ssf`, `@ssf`, `#ssf` or `[ssf]`, and never inside comments or strings.
 - With a selection, Tab indents as usual. With several carets, Tab does nothing special.
 - User-defined snippets are planned (SSM-16).
+
+### Surround with Transaction
+
+Select statements (or put the caret on a one-line statement) and run **Tools > SSMS Helper: Surround with
+Transaction**. There is no default key; bind one under Tools > Options > Environment > Keyboard, command
+`Tools.SSMSHelperSurroundWithTransaction`.
+
+```sql
+BEGIN TRANSACTION;
+
+DELETE FROM dbo.Reviews WHERE Rating < 2
+
+SELECT @@ROWCOUNT AS RowsAffected;
+
+ROLLBACK TRANSACTION;
+-- COMMIT TRANSACTION;
+```
+
+- Running it shows how many rows changed and then rolls back. To keep the change, comment out `ROLLBACK` and
+  uncomment `COMMIT`. The caret lands on the `ROLLBACK` line.
+- Whole lines are wrapped, as selected; the wrapper lines up with the least indented line. One Ctrl+Z undoes it.
+- `@@ROWCOUNT` counts the last statement only.
+- The `bt` snippet is the empty version, for typing the statements afterwards.
 
 ## JOIN helper
 
@@ -357,6 +380,7 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 |---|---|
 | SSMS Helper: Suggest Join | Opens the JOIN list at the caret (keyboard name `Tools.SSMSHelperSuggestJoin`) |
 | SSMS Helper: Script Object | F12: ALTER / CREATE script of the object under the caret in a new window |
+| SSMS Helper: Surround with Transaction | Wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK (no default key) |
 | SSMS Helper: Refresh Schema | Reloads the current database's schema |
 | SSMS Helper: About | Shows the extension version, the SSMS version and the .NET runtime |
 
@@ -387,6 +411,7 @@ All messages start with `SSMS Helper:`.
 | `ALTER script for <name>.` / `CREATE script for <name>.` | F12 opened the script |
 | `<name> is not a table, view, procedure, function or trigger in this database.` | F12: nothing with that name |
 | `<name> is encrypted or you lack VIEW DEFINITION; ...` | F12: no source available |
+| `wrapped in a transaction that rolls back; ...` | Surround with Transaction done |
 | `execution cancelled.` | You chose Cancel in the WHERE safety check |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
 | `the query window is not connected to a database.` | Suggest Join command in a disconnected window |

@@ -153,6 +153,12 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - An IntelliSense pick (Enter/Tab, Shift+Enter) expands like Tab via `ExecHelperController.AfterKey`, the same
   same-line/non-whitespace check and paired undo as the INSERT helper; it never starts a schema load.
 
+## Surround with Transaction notes
+
+- Core `Transactions/TransactionWrapper.Wrap(lines, newLine)`; Vsix `Commands/SurroundTransactionCommand` takes the
+  stream selection's whole lines (or the caret line), one `ITextEdit`. A plain menu command with no default key and
+  no setting: it only runs when invoked.
+
 ## F12 Script Object notes
 
 - Core: `Scripting/ObjectReference.At(line, column)` (name around the caret, 1-3 parts, no spaces around dots) and
