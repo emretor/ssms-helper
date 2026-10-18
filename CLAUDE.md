@@ -153,6 +153,17 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - An IntelliSense pick (Enter/Tab, Shift+Enter) expands like Tab via `ExecHelperController.AfterKey`, the same
   same-line/non-whitespace check and paired undo as the INSERT helper; it never starts a schema load.
 
+## F12 Script Object notes
+
+- Core: `Scripting/ObjectReference.At(line, column)` (name around the caret, 1-3 parts, no spaces around dots) and
+  `ObjectScript` (`Alter`: USE + SET options + definition with leading CREATE [OR ALTER] -> ALTER; `Create`).
+- Vsix: `ObjectScripter` looks the name up with `OBJECT_ID(@name)` joined to sys.sql_modules, then SMO
+  `Table.Script(ScriptingOptions)` for tables (SMO + Sfc referenced compile-only from SSMS). Opens with
+  `ScriptFactory.CreateNewBlankScript(ScriptType.Sql, uiConnection copy with AdvancedOptions["DATABASE"], null)`
+  and inserts through `DTE.ActiveDocument` TextDocument.
+- F12 is a vsct KeyBinding (global scope) on `Tools.SSMSHelperScriptObject`; the command filter also maps VSStd97
+  GotoDefn (Edit.GoToDefinition) to the same action in case SSMS's scheme binds F12 to that.
+
 ## WHERE safety check notes
 
 - `Core/Safety/UnfilteredWriteDetector`: one tokenizer pass, then a forward scan per UPDATE/DELETE keyword until

@@ -53,6 +53,8 @@
     <SsmsReference Include="Microsoft.SqlServer.RegSvrEnum" />
     <SsmsReference Include="Microsoft.SqlServer.ConnectionInfo" />
     <SsmsReference Include="Microsoft.Data.SqlClient" />
+    <SsmsReference Include="Microsoft.SqlServer.Smo" />
+    <SsmsReference Include="Microsoft.SqlServer.Management.Sdk.Sfc" />
     <Reference Include="@(SsmsReference)">
       <HintPath>$(SsmsIdeDir)\%(Identity).dll</HintPath>
       <Private>false</Private>

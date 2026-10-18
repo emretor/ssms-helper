@@ -1,12 +1,13 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.9.1, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.10.0, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
 - [INSERT helper](#insert-helper)
 - [Expand SELECT *](#expand-select-)
 - [EXEC helper](#exec-helper)
+- [F12: script the object](#f12-script-the-object)
 - [WHERE safety check](#where-safety-check)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
 - [Options](#options)
@@ -271,6 +272,27 @@ EXEC dbo.GetOrders
 - Unknown name: the status bar says it is not a stored procedure in this database, and Tab works as usual.
   Dynamic SQL (`EXEC (@sql)`, `EXEC @proc`) and temporary procedures are left alone.
 
+## F12: script the object
+
+Put the caret on a name (anywhere in `dbo.GetOrders`, or right after it) and press **F12**. A new query window opens
+on the same database with:
+
+- **Procedure, view, function or trigger:** its `ALTER` statement, with `USE`, the `SET ANSI_NULLS` /
+  `SET QUOTED_IDENTIFIER` it was created with, and the source as stored (comments included).
+- **Table:** its `CREATE TABLE` statement with defaults, keys, foreign keys, checks and indexes, the same as Object
+  Explorer's Script Table as > CREATE To.
+
+Nothing is executed; edit and run the script yourself. Details:
+
+- Names without a schema resolve like the server does (your default schema, then dbo). Three-part names work for
+  the window's own database; for another database the status bar asks you to switch first.
+- Encrypted modules, or no `VIEW DEFINITION` permission: the status bar says it cannot be scripted.
+- Synonyms, sequences, table types, temp tables and names with a linked server are not scripted.
+- Also on the Tools menu as **SSMS Helper: Script Object** (keyboard name `Tools.SSMSHelperScriptObject`); rebind
+  it under Tools > Options > Environment > Keyboard. Turn it off under [Options](#options).
+- Cost: one small query per F12, plus SMO for tables (about half a second the first time, then faster). Nothing
+  runs while you type.
+
 ## WHERE safety check
 
 When you execute (F5, Ctrl+E or the Execute button) a script with an `UPDATE` or `DELETE` that has no `WHERE`,
@@ -322,6 +344,7 @@ This changes every row. Run anyway?
 | INSERT helper | On | Tab / Shift+Enter / IntelliSense pick after `INSERT INTO table` |
 | Expand SELECT * | On | Tab / Shift+Enter right after the `*` |
 | EXEC helper | On | Tab / Shift+Enter / IntelliSense pick after `EXEC procedure` |
+| F12 scripts the object | On | F12 opens the ALTER / CREATE script in a new window |
 | Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
 | Ctrl+Shift+R also reloads the schema | On | SSMS's Refresh Local Cache reloads our schema too |
 | Schema cache minutes | 30 | How long a loaded schema is used before a background refresh (1 to 1440) |
@@ -333,6 +356,7 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 | Command (Tools menu) | What it does |
 |---|---|
 | SSMS Helper: Suggest Join | Opens the JOIN list at the caret (keyboard name `Tools.SSMSHelperSuggestJoin`) |
+| SSMS Helper: Script Object | F12: ALTER / CREATE script of the object under the caret in a new window |
 | SSMS Helper: Refresh Schema | Reloads the current database's schema |
 | SSMS Helper: About | Shows the extension version, the SSMS version and the .NET runtime |
 
@@ -359,6 +383,10 @@ All messages start with `SSMS Helper:`.
 | `<x> is not a table or alias in this query.` | `x.*` does not match any table in the FROM clause |
 | `<n> parameter(s) of <procedure>.` | EXEC helper done |
 | `<name> is not a stored procedure in <db>.` | EXEC helper: unknown procedure |
+| `scripting <name>...` | F12 is looking up the object |
+| `ALTER script for <name>.` / `CREATE script for <name>.` | F12 opened the script |
+| `<name> is not a table, view, procedure, function or trigger in this database.` | F12: nothing with that name |
+| `<name> is encrypted or you lack VIEW DEFINITION; ...` | F12: no source available |
 | `execution cancelled.` | You chose Cancel in the WHERE safety check |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
 | `the query window is not connected to a database.` | Suggest Join command in a disconnected window |

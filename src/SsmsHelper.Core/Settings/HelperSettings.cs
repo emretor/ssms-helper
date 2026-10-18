@@ -32,6 +32,9 @@ public sealed record HelperSettings
     /// <summary>Tab / Shift+Enter / IntelliSense pick after "EXEC procedure".</summary>
     public bool ExecHelper { get; init; } = true;
 
+    /// <summary>F12 scripts the object under the caret into a new query window.</summary>
+    public bool ScriptObject { get; init; } = true;
+
     /// <summary>Execute asks before running UPDATE or DELETE without WHERE.</summary>
     public bool WhereSafetyCheck { get; init; } = true;
 
@@ -54,6 +57,7 @@ public sealed record HelperSettings
         [nameof(InsertHelper)] = Format(InsertHelper),
         [nameof(StarExpansion)] = Format(StarExpansion),
         [nameof(ExecHelper)] = Format(ExecHelper),
+        [nameof(ScriptObject)] = Format(ScriptObject),
         [nameof(WhereSafetyCheck)] = Format(WhereSafetyCheck),
         [nameof(RefreshWithIntelliSense)] = Format(RefreshWithIntelliSense),
         [nameof(SchemaCacheMinutes)] = SchemaCacheMinutes.ToString(CultureInfo.InvariantCulture),
@@ -67,6 +71,7 @@ public sealed record HelperSettings
         InsertHelper = ReadBool(get, nameof(InsertHelper), Default.InsertHelper),
         StarExpansion = ReadBool(get, nameof(StarExpansion), Default.StarExpansion),
         ExecHelper = ReadBool(get, nameof(ExecHelper), Default.ExecHelper),
+        ScriptObject = ReadBool(get, nameof(ScriptObject), Default.ScriptObject),
         WhereSafetyCheck = ReadBool(get, nameof(WhereSafetyCheck), Default.WhereSafetyCheck),
         RefreshWithIntelliSense = ReadBool(get, nameof(RefreshWithIntelliSense), Default.RefreshWithIntelliSense),
         SchemaCacheMinutes = int.TryParse(get(nameof(SchemaCacheMinutes)), NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes)

@@ -43,6 +43,12 @@ public sealed class GeneralOptionsPage : DialogPage
     [DefaultValue(true)]
     public bool ExecHelper { get; set; } = true;
 
+    [Category(Helpers)]
+    [DisplayName("F12 scripts the object")]
+    [Description("F12 on a procedure, view, function or trigger opens its ALTER script, on a table its CREATE script, in a new query window.")]
+    [DefaultValue(true)]
+    public bool ScriptObject { get; set; } = true;
+
     [Category(Safety)]
     [DisplayName("Ask before UPDATE or DELETE without WHERE")]
     [Description("Execute (F5, Ctrl+E) asks for confirmation when the script has an UPDATE or DELETE without WHERE.")]
@@ -70,6 +76,7 @@ public sealed class GeneralOptionsPage : DialogPage
         InsertHelper = settings.InsertHelper;
         StarExpansion = settings.StarExpansion;
         ExecHelper = settings.ExecHelper;
+        ScriptObject = settings.ScriptObject;
         WhereSafetyCheck = settings.WhereSafetyCheck;
         RefreshWithIntelliSense = settings.RefreshWithIntelliSense;
         SchemaCacheMinutes = settings.SchemaCacheMinutes;
@@ -85,6 +92,7 @@ public sealed class GeneralOptionsPage : DialogPage
             InsertHelper = InsertHelper,
             StarExpansion = StarExpansion,
             ExecHelper = ExecHelper,
+            ScriptObject = ScriptObject,
             WhereSafetyCheck = WhereSafetyCheck,
             RefreshWithIntelliSense = RefreshWithIntelliSense,
             SchemaCacheMinutes = SchemaCacheMinutes,

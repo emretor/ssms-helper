@@ -74,6 +74,13 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
             return undone;
         }
 
+        // F12 bound to Edit.GoToDefinition (VS default) instead of our Script Object command: same action.
+        if (pguidCmdGroup == VSConstants.GUID_VSStandardCommandSet97 && nCmdID == (uint)VSConstants.VSStd97CmdID.GotoDefn &&
+            SettingsStore.Current.ScriptObject && SafeInvoke(() => { ObjectScripter.Run(_view); return true; }))
+        {
+            return VSConstants.S_OK;
+        }
+
         var isEditorCommand = pguidCmdGroup == VSConstants.VSStd2K;
         var key = isEditorCommand ? EditorKeys.From(nCmdID) : EditorKey.Other;
 
