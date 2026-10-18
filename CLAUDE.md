@@ -174,6 +174,13 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   manager dismisses and calls `SqlCompletionSource.Open` when the typed text has whitespace outside brackets.
 - `o.` resolves the alias (or unaliased table name) through `TableSources.Collect` over the statement; derived,
   #temp and unknown qualifiers return null so SSMS's list handles them.
+- JOIN conditions (SSM-40): `CompletionKind.JoinConditions` after "JOIN table [alias] " and "ON" (pre-check: anchor ON,
+  or JOIN within 7 tokens, then `JoinContextAnalyzer` on the window). Items: `JoinSuggester` conditions (tier 0),
+  then columns of the joined table and the earlier ones (tier 1). `CompletionCandidate.Tier` sorts before match
+  quality. `JoinContext.Prefix` ("ON ") goes into InsertText only. Typed triggers follow `JoinAutoOpen` and
+  `JoinPopupRules.ListOpensOnTyping`; with the completion list on, `JoinSuggestionController` does not auto-open,
+  and Suggest Join opens the completion list (the popup only for "ON|" / right after the alias with no space).
+  After "=", AND, OR, NOT, "(" in an ON condition: columns (`OnTables`).
 - The schema load has a sixth result set: table-valued functions (IF, TF, FT).
 - `USE ` lists databases from `SchemaService.Databases`, a `LoadingCache<string server, ServerDatabases>` (Core
   `Metadata/DatabaseListLoader`: sys.databases, state = 0, HAS_DBACCESS). `SchemaCache` is the same generic

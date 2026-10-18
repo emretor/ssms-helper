@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.12.1, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.13.1, SSMS 22.
 
 - [Completion list](#completion-list)
 - [Snippets](#snippets)
@@ -36,7 +36,9 @@ type). It opens **right after the space**, without Ctrl+J:
 | `EXEC ` | Stored procedures |
 | `UPDATE dbo.Orders SET ` (and after each `, ` in the SET list) | The columns you can update: no identity, computed or rowversion columns |
 | `... WHERE ` (and after `AND ` / `OR ` / `(` in the WHERE clause) | The columns of the tables in the statement, with their types |
-| `o.` (an alias or table name of the statement, anywhere: SELECT list, ON, WHERE, ...) | The columns of that table, right after the dot |
+| `JOIN dbo.Orders o ` / `... ON ` | The [JOIN helper's](#join-helper) conditions first, then the columns of every table so far (the joined table first) |
+| `... ON o.CustomerId = ` (and after `AND ` / `OR ` / `( ` in the ON condition) | The columns of the tables so far, the joined table first |
+| `o.` (an alias or table name of the statement, anywhere: SELECT list, WHERE, ...) | The columns of that table, right after the dot |
 | `SELECT * ` | Keywords: `FROM`, `INTO`, then statement keywords |
 | `USE ` | The server's databases you can open: yours by name, then `master`, `model`, `msdb`, `tempdb` ("system"). Offline databases are left out |
 
@@ -56,7 +58,7 @@ type). It opens **right after the space**, without Ctrl+J:
   and the list opens there.
 - **Picking a table after `INSERT INTO`** or **a procedure after `EXEC`** with Enter or Tab then runs the INSERT /
   EXEC helper as before (Shift+Enter gives the compact form).
-- **Everywhere else** (`dbo.` outside FROM, `ON `, `ORDER BY`, functions, variables, ...) SSMS's own IntelliSense list works as
+- **Everywhere else** (`dbo.` outside FROM, `ORDER BY`, functions, variables, ...) SSMS's own IntelliSense list works as
   before. SSMS's red error underlines and tooltips are not affected.
 - The first time on a database the list waits for the schema to load (`loading schema for ...` in the status bar)
   and then opens by itself, as long as you have not typed or moved meanwhile. The status bar then says
@@ -131,6 +133,29 @@ The list opens by itself when you type a space:
 
 It does not open after a table without an alias (`JOIN dbo.Orders `), because you are probably about to type one.
 Use **Tools > SSMS Helper: Suggest Join** to open it anywhere after `JOIN table` or `ON`.
+
+With the [completion list](#completion-list) on (the default), the conditions are the top of that list, and
+the columns of every table in the query so far follow them, the joined table first, then the nearest earlier
+ones. One list, so SSMS's own list never opens on top of it:
+
+```
+SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON |
+    o.CustomerId = c.CustomerId     FK_Orders_Customers
+    o.OrderId                       int
+    o.CustomerId                    int
+    ...
+    c.CustomerId                    int
+    c.Name                          nvarchar(100)
+```
+
+- Typing filters conditions and columns together, and the conditions stay on top: `o.custo` keeps
+  `o.CustomerId = c.CustomerId` first, then the column `o.CustomerId`.
+- Picking a column writes it with the alias (`o.CustomerId`); after `JOIN dbo.Orders o ` it gets `ON ` in front,
+  as a condition does. Then type ` = ` and the columns list opens again for the other side.
+- Foreign keys show their name on the right; guesses (no foreign key) say so there instead of being in italics.
+- Enter or Tab picks, Esc closes, as everywhere in the completion list.
+
+With the completion list off, the separate JOIN list below opens instead (conditions only).
 
 ### Keys while the list is open
 
@@ -445,7 +470,7 @@ This changes every row. Run anyway?
 |---|---|---|
 | Completion list | On | Our list after `FROM ` / `JOIN ` / `INTO ` / `UPDATE ` / `EXEC `, `SET `, `WHERE `, `SELECT * `. Off: SSMS's list everywhere |
 | Snippets | On | Tab expands `ssf`, `ii`, `upd`, `df`, `bt`, ... |
-| JOIN list opens automatically | On | The ON list after `JOIN table alias ` and `ON `. Off: use the Suggest Join command |
+| JOIN list opens automatically | On | The join conditions after `JOIN table alias ` and `ON ` (in the completion list, or the JOIN list when that is off). Off: use the Suggest Join command or Ctrl+J |
 | INSERT helper | On | Tab / Shift+Enter / IntelliSense pick after `INSERT INTO table` |
 | Expand SELECT * | On | Tab / Shift+Enter right after the `*` |
 | EXEC helper | On | Tab / Shift+Enter / IntelliSense pick after `EXEC procedure` |
@@ -511,7 +536,8 @@ All messages start with `SSMS Helper:`.
 ## Limitations
 
 - Microsoft does not support third-party SSMS extensions; an SSMS update can break this one.
-- SSMS's IntelliSense list can appear on top of the JOIN list while you type to filter (SSM-40).
+- With the completion list off, SSMS's IntelliSense list can appear on top of the JOIN list while you type to
+  filter. With it on (the default), the conditions are in our list and this does not happen.
 - A name typed over several lines (for example `JOIN` on one line and the alias on the next) does not open the
   JOIN list automatically; use the Suggest Join command.
 - Cross-database names (`OtherDb.dbo.Table`) are looked up in the current database only.

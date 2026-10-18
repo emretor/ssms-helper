@@ -70,6 +70,17 @@ public class JoinPopupRulesTests
         Assert.Equal(expected, JoinPopupRules.ShouldAutoOpen(Analyze(marked)));
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM Customers c JOIN Orders o ON |", true)]
+    [InlineData("SELECT * FROM Customers c JOIN Orders o ON o.Cu|", true)]   // the list opens on the first letters too
+    [InlineData("SELECT * FROM Customers c JOIN Orders o |", true)]
+    [InlineData("SELECT * FROM Customers c JOIN Orders |", false)]           // alias probably follows
+    public void ListOpensOnTyping(string marked, bool expected)
+    {
+        Assert.Equal(expected, JoinPopupRules.ListOpensOnTyping(Analyze(marked)));
+        Assert.False(JoinPopupRules.ListOpensOnTyping(null));
+    }
+
     [Fact]
     public void ShouldAutoOpen_NoContext()
     {

@@ -48,7 +48,8 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
         {
             var item = initial[i];
             var group = item.Properties.TryGetProperty(SqlCompletionSource.GroupProperty, out int g) ? g : 0;
-            candidates[i] = new CompletionCandidate(item.FilterText, group);
+            var tier = item.Properties.TryGetProperty(SqlCompletionSource.TierProperty, out int t) ? t : 0;
+            candidates[i] = new CompletionCandidate(item.FilterText, group, tier);
         }
 
         session.Properties[CandidatesProperty] = candidates;

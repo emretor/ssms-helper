@@ -152,7 +152,8 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
                     }
                 }
 
-                Joins.PostprocessCommand(key, typed, settings.JoinAutoOpen);
+                // With our completion list on, it shows the join conditions (SSM-40); this popup is the fallback.
+                Joins.PostprocessCommand(key, typed, settings.JoinAutoOpen && !settings.CompletionList);
                 return true;
             });
         }

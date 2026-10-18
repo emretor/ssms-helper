@@ -22,6 +22,24 @@ public class CompletionMatcherTests
         CompletionMatcher.Filter(Objects, typed).Select(m => Objects[m.Index].Text).ToArray();
 
     [Fact]
+    public void Tier_KeepsJoinConditionsAboveBetterMatchingColumns()
+    {
+        var items = new CompletionCandidate[]
+        {
+            new("a.AddressId = o.ShippingAddressId", 0, 0),
+            new("a.AddressId = o.BillingAddressId", 0, 0),
+            new("o.ShippingAddressId", 1, 1),
+            new("a.AddressId", 2, 1),
+        };
+
+        string[] Run(string typed) => CompletionMatcher.Filter(items, typed).Select(m => items[m.Index].Text).ToArray();
+
+        // "Ship" is only inside the condition but at the start of the column; the condition still comes first.
+        Assert.Equal(new[] { "a.AddressId = o.ShippingAddressId", "o.ShippingAddressId" }, Run("Ship"));
+        Assert.Equal(new[] { "a.AddressId = o.ShippingAddressId", "a.AddressId = o.BillingAddressId", "a.AddressId" }, Run("a.Add"));
+    }
+
+    [Fact]
     public void Gam_FindsGamesFirst_ThenNamesContainingIt()
     {
         Assert.Equal(new[] { "dbo.Games", "dbo.VideoGames" }, Filter("gam"));

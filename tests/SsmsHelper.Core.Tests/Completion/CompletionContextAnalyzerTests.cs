@@ -113,7 +113,6 @@ public class CompletionContextAnalyzerTests
     [InlineData("SELECT * FROM (SELECT 1 AS x) d WHERE d.|")]   // derived table
     [InlineData("SELECT * FROM #work w WHERE w.|")]
     [InlineData("SELECT * FROM dbo.Orders WHERE Status = |")]
-    [InlineData("SELECT * FROM dbo.Orders o JOIN dbo.Lines l ON |")]
     [InlineData("SELECT * FROM #work WHERE |")]
     [InlineData("SET |")]
     [InlineData("EXEC @rc|")]
@@ -129,7 +128,6 @@ public class CompletionContextAnalyzerTests
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.|", "dbo.Orders o", 35)]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Sta|", "dbo.Orders o", 35)]
     [InlineData("SELECT o.| FROM dbo.Orders o", "dbo.Orders o", 9)]
-    [InlineData("SELECT * FROM dbo.Orders o JOIN dbo.Customers c ON c.|", "dbo.Customers c", 53)]
     [InlineData("SELECT * FROM dbo.Orders WHERE Orders.|", "dbo.Orders", 38)]
     [InlineData("SELECT * FROM dbo.Orders O WHERE o.|", "dbo.Orders O", 35)]
     public void QualifiedColumns_AfterAlias(string text, string table, int replaceStart)
@@ -156,6 +154,66 @@ public class CompletionContextAnalyzerTests
         var caret = textWithCaret.IndexOf('|');
         var text = textWithCaret.Remove(caret, 1);
         Assert.Equal(rest, text.Substring(caret, CompletionContextAnalyzer.ReplaceEnd(text, caret) - caret));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o |", 48, "ON ")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders AS o |", 51, "ON ")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders |", 46, "ON ")]       // the source decides about bare tables
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON |", 51, "")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.Cu|", 51, "")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON c.|", 51, "")]
+    [InlineData("SELECT * FROM dbo.Customers c\nJOIN dbo.Orders o\n    ON |", 55, "")]
+    public void JoinConditions(string text, int replaceStart, string prefix)
+    {
+        var context = Analyze(text)!;
+        Assert.Equal(CompletionKind.JoinConditions, context.Kind);
+        Assert.Equal(replaceStart, context.ReplaceStart);
+        Assert.Equal(prefix, context.Join!.Prefix);
+        Assert.Equal("dbo.Orders" + (text.Contains("Orders o") || text.Contains("AS o") ? " o" : ""), context.Join.Target.FullText + (context.Join.Target.AliasText is { } a ? " " + a : ""));
+    }
+
+    [Fact]
+    public void JoinConditions_JoinedTableFirst_ThenTheNearestEarlierOnes()
+    {
+        var context = Analyze("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId JOIN dbo.OrderLines l ON |")!;
+
+        Assert.Equal(CompletionKind.JoinConditions, context.Kind);
+        Assert.Equal("dbo.OrderLines l, dbo.Orders o, dbo.Customers c", Tables(context));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o|")]          // typing the alias
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON|")]       // no space yet
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId |")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o WITH (NOLOCK) |")]
+    [InlineData("SELECT * FROM dbo.Customers c |")]                          // no JOIN
+    public void JoinConditions_NotHere(string text)
+    {
+        Assert.NotEqual(CompletionKind.JoinConditions, Analyze(text)?.Kind);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = |", "dbo.Orders o, dbo.Customers c")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId AND |", "dbo.Orders o, dbo.Customers c")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON ( |", "dbo.Orders o, dbo.Customers c")]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN (SELECT 1 AS x) d ON |", "dbo.Customers c")]   // derived: columns only
+    [InlineData("SELECT * FROM a JOIN b ON a.x = b.x JOIN c ON c.y = |", "c, b, a")]
+    public void OnClause_Columns(string text, string tables)
+    {
+        var context = Analyze(text)!;
+        Assert.Equal(CompletionKind.Columns, context.Kind);
+        Assert.False(context.AfterQualifier);
+        Assert.Equal(tables, Tables(context));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON o.Total >= |")]
+    [InlineData("SELECT * FROM dbo.Orders WHERE Status = |")]
+    [InlineData("CREATE INDEX ix ON dbo.Orders (|")]
+    public void OnClause_NoColumns(string text)
+    {
+        Assert.Null(Analyze(text));
     }
 
     [Fact]

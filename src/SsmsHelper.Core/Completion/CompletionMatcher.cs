@@ -6,7 +6,8 @@ namespace SsmsHelper.Core.Completion;
 /// <summary>One list entry for matching.</summary>
 /// <param name="Text">Text shown and matched, e.g. "dbo.Orders", "o.OrderId", "FROM".</param>
 /// <param name="Group">Order between kinds when matches are equally good: tables 0, views 1, functions 2, ...</param>
-public readonly record struct CompletionCandidate(string Text, int Group);
+/// <param name="Tier">Sorted before the match quality: join conditions (0) stay above columns (1) whatever matches better.</param>
+public readonly record struct CompletionCandidate(string Text, int Group, int Tier = 0);
 
 /// <summary>A candidate that matches the typed text.</summary>
 /// <param name="Index">Index into the candidate list.</param>
@@ -28,11 +29,11 @@ public static class CompletionMatcher
     private const int NameContains = 2;
     private const int FullContains = 3;
 
-    /// <returns>The matching candidates, best first: exact name, name starts with the text (shorter names first),
-    /// name contains it, whole text contains it; then by group, then by the original order.</returns>
+    /// <returns>The matching candidates, best first: by tier, then exact name, name starts with the text (shorter
+    /// names first), name contains it, whole text contains it; then by group, then by the original order.</returns>
     public static List<CompletionMatch> Filter(IReadOnlyList<CompletionCandidate> candidates, string typed)
     {
-        var ranked = new List<(int Rank, int Group, int Length, CompletionMatch Match)>();
+        var ranked = new List<(int Tier, int Rank, int Group, int Length, CompletionMatch Match)>();
         for (var i = 0; i < candidates.Count; i++)
         {
             var text = candidates[i].Text;
@@ -40,13 +41,18 @@ public static class CompletionMatcher
             {
                 // Shorter names first among "starts with" name matches; otherwise keep the given order.
                 var length = rank == NameStartsWith && typed.Length > 0 && typed.IndexOf('.') < 0 ? text.Length - NameStart(text) : 0;
-                ranked.Add((rank, candidates[i].Group, length, new CompletionMatch(i, start, typed.Length)));
+                ranked.Add((candidates[i].Tier, rank, candidates[i].Group, length, new CompletionMatch(i, start, typed.Length)));
             }
         }
 
         ranked.Sort((a, b) =>
         {
-            var c = a.Rank.CompareTo(b.Rank);
+            var c = a.Tier.CompareTo(b.Tier);
+            if (c == 0)
+            {
+                c = a.Rank.CompareTo(b.Rank);
+            }
+
             if (c == 0)
             {
                 c = a.Group.CompareTo(b.Group);

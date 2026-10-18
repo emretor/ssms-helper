@@ -21,6 +21,12 @@ public enum CompletionKind
 
     /// <summary>Databases of the server: after USE.</summary>
     Databases,
+
+    /// <summary>
+    /// Join conditions for <see cref="CompletionContext.Join"/>, then the columns of <see cref="CompletionContext.Tables"/>
+    /// (the joined table first): after "JOIN table [alias] " and after "JOIN table [alias] ON".
+    /// </summary>
+    JoinConditions,
 }
 
 /// <summary>Where a completion list applies and what it lists.</summary>
@@ -29,8 +35,10 @@ public enum CompletionKind
 /// <param name="Tables">For <see cref="CompletionKind.Columns"/>: the tables whose columns to list, as written.</param>
 /// <param name="UpdatableOnly">For columns after UPDATE ... SET: leave out identity, computed and rowversion columns.</param>
 /// <param name="AfterQualifier">For columns after "o.": the alias is already typed, so names go in unqualified.</param>
+/// <param name="Join">For <see cref="CompletionKind.JoinConditions"/>: the JOIN being written. Its positions are
+/// relative to the analyzed text; use <paramref name="ReplaceStart"/> for the buffer.</param>
 public sealed record CompletionContext(CompletionKind Kind, int ReplaceStart, IReadOnlyList<TableReference> Tables,
-    bool UpdatableOnly = false, bool AfterQualifier = false)
+    bool UpdatableOnly = false, bool AfterQualifier = false, JoinContext? Join = null)
 {
     public static CompletionContext Of(CompletionKind kind, int replaceStart) => new(kind, replaceStart, Array.Empty<TableReference>());
 }
@@ -146,6 +154,11 @@ public static class CompletionContextAnalyzer
             return qualified ? null : CompletionContext.Of(CompletionKind.Databases, replaceStart);
         }
 
+        if (JoinConditions(text, tokens, anchor, typedName: first <= before, caret, replaceStart) is { } join)
+        {
+            return join;
+        }
+
         if (qualified)
         {
             return QualifiedColumns(text, tokens, first, before, caret, offset);
@@ -166,7 +179,92 @@ public static class CompletionContextAnalyzer
             return new CompletionContext(CompletionKind.Columns, replaceStart, tables);
         }
 
+        if (OnTables(tokens, anchor) is { Count: > 0 } onTables)
+        {
+            return new CompletionContext(CompletionKind.Columns, replaceStart, onTables);
+        }
+
         return null;
+    }
+
+    /// <summary>
+    /// "JOIN dbo.Orders o |", "JOIN dbo.Orders o ON |", "... ON o.Cu|": the JOIN helper's conditions plus the columns
+    /// of every table so far, the joined table first, then the nearest earlier ones. Not while the alias is typed.
+    /// </summary>
+    private static CompletionContext? JoinConditions(string text, IReadOnlyList<SqlToken> tokens, int anchor, bool typedName, int caret, int replaceStart)
+    {
+        // Cheap pre-check: the anchor is ON, or a name right after "JOIN name[.name] [AS]".
+        var a = tokens[anchor];
+        if (!a.IsWord("ON") && (typedName || !a.IsIdentifier || !JoinShortlyBefore(tokens, anchor)))
+        {
+            return null;
+        }
+
+        var join = JoinContextAnalyzer.Analyze(text, caret);
+        if (join is null || (join.Kind == JoinContextKind.AfterJoinTarget && typedName))
+        {
+            return null;
+        }
+
+        var tables = new List<TableReference> { join.Target };
+        for (var i = join.Previous.Count - 1; i >= 0; i--)
+        {
+            tables.Add(join.Previous[i]);
+        }
+
+        tables.RemoveAll(t => t.IsDerived || t.Name.StartsWith("#", StringComparison.Ordinal) || t.Name.Length == 0);
+        return new CompletionContext(CompletionKind.JoinConditions, replaceStart, tables, Join: join);
+    }
+
+    private static bool JoinShortlyBefore(IReadOnlyList<SqlToken> tokens, int anchor)
+    {
+        // "JOIN [Sales].[dbo].[Order Lines] AS l": at most 7 tokens from JOIN to the alias.
+        for (var i = anchor; i >= 0 && i >= anchor - 7; i--)
+        {
+            if (tokens[i].IsWord("JOIN"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Inside an ON condition, after "=", AND, OR, NOT or "(" (or right after ON when the JOIN helper has nothing):
+    /// the columns of the tables up to that ON, the joined table first, then the nearest earlier ones.
+    /// </summary>
+    private static List<TableReference>? OnTables(IReadOnlyList<SqlToken> tokens, int anchor)
+    {
+        var a = tokens[anchor];
+        int on;
+        if (a.IsWord("ON"))
+        {
+            on = anchor;
+        }
+        else if ((a.Text == "=" && !(anchor > 0 && tokens[anchor - 1].End == a.Start && tokens[anchor - 1].Kind == SqlTokenKind.Operator)) ||
+                 a.IsWord("AND") || a.IsWord("OR") || a.IsWord("NOT") || a.IsPunctuation('('))
+        {
+            on = ClauseBefore(tokens, anchor);
+            if (on < 0 || !tokens[on].IsWord("ON"))
+            {
+                return null;
+            }
+        }
+        else
+        {
+            return null;
+        }
+
+        var tables = new List<TableReference>();
+        foreach (var source in TableSources.Collect(tokens, StatementStart(tokens, on), on))
+        {
+            tables.Add(source.Reference);
+        }
+
+        tables.Reverse();
+        tables.RemoveAll(t => t.IsDerived || t.Name.StartsWith("#", StringComparison.Ordinal) || t.Name.Length == 0);
+        return tables;
     }
 
     private static bool IsObjectKeyword(IReadOnlyList<SqlToken> tokens, int i)

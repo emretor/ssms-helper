@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using SsmsHelper.Connections;
 using SsmsHelper.Core.Editor;
 using SsmsHelper.Core.Joins;
+using SsmsHelper.Options;
 using Task = System.Threading.Tasks.Task;
 
 namespace SsmsHelper.Editor;
@@ -14,7 +15,8 @@ namespace SsmsHelper.Editor;
 /// <summary>
 /// Shows foreign-key based join conditions for one SQL editor. Opens automatically when the user
 /// types a space after "JOIN table alias" (the suggestion then includes "ON ") or after "JOIN table [alias] ON",
-/// or on demand through Tools > SSMS Helper: Suggest Join.
+/// or on demand through Tools > SSMS Helper: Suggest Join. With the completion list on, the conditions are in that
+/// list instead (SqlCompletionSource, SSM-40) and this popup is not used: SSMS's own list could open on top of it.
 /// </summary>
 internal sealed class JoinSuggestionController
 {
@@ -110,6 +112,19 @@ internal sealed class JoinSuggestionController
         if (context is null)
         {
             StatusBar.Show("place the caret after \"JOIN table alias\" or after \"ON\" to get join suggestions.");
+            return;
+        }
+
+        // Right after the alias or after "ON" with no space ("ON|"), the list has no name to start from; the popup does.
+        if (SettingsStore.Current.CompletionList && !context.Prefix.StartsWith(" ", StringComparison.Ordinal))
+        {
+            if (ActiveConnectionProvider.TryGetCurrent() is null)
+            {
+                StatusBar.Show("the query window is not connected to a database.");
+                return;
+            }
+
+            _intelliSense.OpenCompletion(_view);
             return;
         }
 

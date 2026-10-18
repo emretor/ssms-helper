@@ -17,6 +17,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using SsmsHelper.Connections;
 using SsmsHelper.Core.Completion;
+using SsmsHelper.Core.Editor;
 using SsmsHelper.Core.Inserts;
 using SsmsHelper.Core.Joins;
 using SsmsHelper.Core.Metadata;
@@ -54,6 +55,7 @@ internal sealed class SqlCompletionSourceProvider : IAsyncCompletionSourceProvid
 internal sealed class SqlCompletionSource : IAsyncCompletionSource
 {
     internal const string GroupProperty = "SsmsHelper.Group";
+    internal const string TierProperty = "SsmsHelper.Tier";
 
     private static readonly ImageElement TableIcon = new(KnownMonikers.Table.ToImageId(), "Table");
     private static readonly ImageElement ViewIcon = new(KnownMonikers.View.ToImageId(), "View");
@@ -62,6 +64,8 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
     private static readonly ImageElement ColumnIcon = new(KnownMonikers.Field.ToImageId(), "Column");
     private static readonly ImageElement KeywordIcon = new(KnownMonikers.IntellisenseKeyword.ToImageId(), "Keyword");
     private static readonly ImageElement DatabaseIcon = new(KnownMonikers.Database.ToImageId(), "Database");
+    private static readonly ImageElement ForeignKeyIcon = new(KnownMonikers.ForeignKey.ToImageId(), "Foreign key");
+    private static readonly ImageElement GuessIcon = new(KnownMonikers.Relationship.ToImageId(), "Name match");
 
     // After "SELECT *": what usually comes next first, then the words that start another statement.
     private static readonly string[] PrimaryKeywords = { "FROM", "INTO" };
@@ -107,6 +111,13 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
             return CompletionStartData.DoesNotParticipateInCompletion;
         }
 
+        // Typing opens the JOIN list as the JOIN helper always did; Ctrl+J and Suggest Join open it anywhere it applies.
+        if (context.Kind == CompletionKind.JoinConditions && trigger.Reason == CompletionTriggerReason.Insertion &&
+            !(SettingsStore.Current.JoinAutoOpen && JoinPopupRules.ListOpensOnTyping(context.Join)))
+        {
+            return CompletionStartData.DoesNotParticipateInCompletion;
+        }
+
         var key = SchemaService.Register(connection);
         if (context.Kind == CompletionKind.Databases)
         {
@@ -127,8 +138,14 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
             return CompletionStartData.DoesNotParticipateInCompletion;
         }
 
-        if (context.Kind == CompletionKind.Columns && !context.Tables.Any(t => Resolve(schema, t) is not null))
+        if (context.Kind is CompletionKind.Columns or CompletionKind.JoinConditions && !context.Tables.Any(t => Resolve(schema, t) is not null))
         {
+            // Unknown tables after JOIN usually mean the window is on another database; say so, as the JOIN list did.
+            if (context.Join is { } join && JoinSuggester.UnresolvedTables(join, schema) is { Count: > 0 } missing)
+            {
+                StatusBar.Show($"{string.Join(", ", missing.Select(t => t.FullText))} not found in {key.Database}. Is the query window on the right database?");
+            }
+
             return CompletionStartData.DoesNotParticipateInCompletion; // unknown tables: leave it to SSMS's list
         }
 
@@ -193,6 +210,7 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
             CompletionKind.Objects => SchemaItems(schema)[0],
             CompletionKind.Procedures => SchemaItems(schema)[1],
             CompletionKind.Columns => ColumnItems(schema, context),
+            CompletionKind.JoinConditions => JoinItems(schema, context),
             _ => ImmutableArray<CompletionItem>.Empty,
         };
 
@@ -275,11 +293,29 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
             .ToImmutableArray();
 
     /// <summary>
+    /// The JOIN helper's conditions (foreign keys, then name matches), then every table's columns, joined table first.
+    /// After "JOIN table alias " each pick goes in with "ON " in front.
+    /// </summary>
+    private ImmutableArray<CompletionItem> JoinItems(DatabaseSchema schema, SqlContext context)
+    {
+        var join = context.Join!;
+        var builder = ImmutableArray.CreateBuilder<CompletionItem>();
+        foreach (var suggestion in JoinSuggester.Suggest(join, schema))
+        {
+            var icon = suggestion.Kind == JoinSuggestionKind.ForeignKey ? ForeignKeyIcon : GuessIcon;
+            builder.Add(Item(suggestion.Condition, icon, suggestion.Description, group: 0, tier: 0, insertPrefix: join.Prefix));
+        }
+
+        builder.AddRange(ColumnItems(schema, context, tier: 1, insertPrefix: join.Prefix));
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
     /// Columns of the context's tables in table order. In a WHERE clause a column is written with its table's alias
     /// ("o.OrderId"), and with more than one table every column is qualified (alias, or the table name as written) so
     /// the pick is unambiguous. After UPDATE ... SET and after "o." names go in unqualified.
     /// </summary>
-    private ImmutableArray<CompletionItem> ColumnItems(DatabaseSchema schema, SqlContext context)
+    private ImmutableArray<CompletionItem> ColumnItems(DatabaseSchema schema, SqlContext context, int tier = 0, string insertPrefix = "")
     {
         var resolved = context.Tables
             .Select(t => (Reference: t, Table: Resolve(schema, t)))
@@ -304,7 +340,7 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
                     continue;
                 }
 
-                builder.Add(Item(prefix + SqlIdentifier.Quote(column.Name), ColumnIcon, InsertGenerator.FormatType(column), group: i));
+                builder.Add(Item(prefix + SqlIdentifier.Quote(column.Name), ColumnIcon, InsertGenerator.FormatType(column), group: i, tier, insertPrefix));
             }
         }
 
@@ -322,11 +358,13 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
             .Concat(StatementKeywords.Select(k => Item(k, KeywordIcon, string.Empty, group: 1)))
             .ToImmutableArray();
 
-    private CompletionItem Item(string text, ImageElement icon, string suffix, int group)
+    /// <param name="insertPrefix">Written before the text on a pick ("ON "), not shown and not matched.</param>
+    private CompletionItem Item(string text, ImageElement icon, string suffix, int group, int tier = 0, string insertPrefix = "")
     {
-        var item = new CompletionItem(text, this, icon, ImmutableArray<CompletionFilter>.Empty, suffix, text, text, text,
+        var item = new CompletionItem(text, this, icon, ImmutableArray<CompletionFilter>.Empty, suffix, insertPrefix + text, text, text,
             ImmutableArray<ImageElement>.Empty);
         item.Properties.AddProperty(GroupProperty, group);
+        item.Properties.AddProperty(TierProperty, tier);
         return item;
     }
 

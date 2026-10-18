@@ -60,6 +60,14 @@ public static class JoinPopupRules
         context is { Kind: JoinContextKind.AfterOn, FilterText.Length: 0 } ||
         context is { Kind: JoinContextKind.AfterJoinTarget, Target.AliasText: not null };
 
+    /// <summary>
+    /// The completion list's JOIN conditions open on typing after "ON" (a space or the first letters of a condition)
+    /// and after "JOIN table alias ". Not after a bare "JOIN table ", as <see cref="ShouldAutoOpen"/>.
+    /// </summary>
+    public static bool ListOpensOnTyping(JoinContext? context) =>
+        context is { Kind: JoinContextKind.AfterOn } ||
+        context is { Kind: JoinContextKind.AfterJoinTarget, Target.AliasText: not null };
+
     /// <summary>The popup stays open while the caret is still in the same ON condition it was opened for.</summary>
     public static bool KeepsOpen(JoinContext? current, JoinContext? opened) =>
         current is not null && opened is not null && current.Kind == opened.Kind && current.ReplaceStart == opened.ReplaceStart;
