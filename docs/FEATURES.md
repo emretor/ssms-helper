@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.10.1, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.10.2, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
@@ -68,16 +68,13 @@ BEGIN TRANSACTION;
 
 DELETE FROM dbo.Reviews WHERE Rating < 2
 
-SELECT @@ROWCOUNT AS RowsAffected;
-
 ROLLBACK TRANSACTION;
 -- COMMIT TRANSACTION;
 ```
 
-- Running it shows how many rows changed and then rolls back. To keep the change, comment out `ROLLBACK` and
+- Running it shows the result (the Messages tab reports the rows affected) and then rolls back. To keep the change, comment out `ROLLBACK` and
   uncomment `COMMIT`. The caret lands on the `ROLLBACK` line.
 - Whole lines are wrapped, as selected; the wrapper lines up with the least indented line. One Ctrl+Z undoes it.
-- `@@ROWCOUNT` counts the last statement only.
 - The `bt` snippet is the empty version, for typing the statements afterwards.
 
 ## JOIN helper

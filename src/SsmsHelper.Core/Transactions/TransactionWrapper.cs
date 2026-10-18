@@ -11,7 +11,7 @@ namespace SsmsHelper.Core.Transactions;
 public sealed record WrappedTransaction(string Text, int CaretOffset);
 
 /// <summary>
-/// Surround with Transaction: wraps whole lines in BEGIN TRANSACTION, a row count and an active ROLLBACK, with
+/// Surround with Transaction: wraps whole lines in BEGIN TRANSACTION and an active ROLLBACK, with
 /// COMMIT commented out. Running it shows the effect and undoes it; swap the two lines to keep the change.
 /// </summary>
 public static class TransactionWrapper
@@ -50,7 +50,6 @@ public static class TransactionWrapper
         }
 
         text.Append(newLine);
-        text.Append(indent).Append("SELECT @@ROWCOUNT AS RowsAffected;").Append(newLine).Append(newLine);
         var caret = text.Length + indent.Length;
         text.Append(indent).Append("ROLLBACK TRANSACTION;").Append(newLine);
         text.Append(indent).Append("-- COMMIT TRANSACTION;");

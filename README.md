@@ -10,7 +10,7 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
   Shift+Enter writes the compact form.
 
 - **Options**: Tools > Options > SSMS Helper turns each helper on or off and sets the schema cache time.
-- **Surround with Transaction**: wraps the selection in BEGIN TRANSACTION, a row count and ROLLBACK.
+- **Surround with Transaction**: wraps the selection in BEGIN TRANSACTION ... ROLLBACK (COMMIT commented out).
 - **F12**: opens the ALTER script of a procedure, view or function, or the CREATE script of a table, in a new window.
 - **WHERE safety check**: Execute asks before running an `UPDATE` or `DELETE` without `WHERE`.
 - **EXEC helper**: `EXEC dbo.Procedure` + Tab lists its parameters with empty values and their types.

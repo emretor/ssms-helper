@@ -5,13 +5,12 @@ namespace SsmsHelper.Core.Tests.Transactions;
 public class TransactionWrapperTests
 {
     [Fact]
-    public void WrapsOneStatement_WithRowCount_AndActiveRollback()
+    public void WrapsOneStatement_WithActiveRollback()
     {
         var wrapped = TransactionWrapper.Wrap(new[] { "DELETE FROM dbo.Reviews WHERE Rating < 2" }, "\n")!;
         Assert.Equal(
             "BEGIN TRANSACTION;\n\n" +
             "DELETE FROM dbo.Reviews WHERE Rating < 2\n\n" +
-            "SELECT @@ROWCOUNT AS RowsAffected;\n\n" +
             "ROLLBACK TRANSACTION;\n" +
             "-- COMMIT TRANSACTION;",
             wrapped.Text);
@@ -28,7 +27,6 @@ public class TransactionWrapperTests
             "    UPDATE dbo.Orders\r\n" +
             "        SET Status = 'X'\r\n" +
             "    WHERE OrderId = 1\r\n\r\n" +
-            "    SELECT @@ROWCOUNT AS RowsAffected;\r\n\r\n" +
             "    ROLLBACK TRANSACTION;\r\n" +
             "    -- COMMIT TRANSACTION;",
             wrapped.Text);
