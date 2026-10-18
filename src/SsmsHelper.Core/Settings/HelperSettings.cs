@@ -17,6 +17,9 @@ public sealed record HelperSettings
 
     public static HelperSettings Default { get; } = new();
 
+    /// <summary>Our completion list: tables after FROM, columns after SET / WHERE, keywords after SELECT *.</summary>
+    public bool CompletionList { get; init; } = true;
+
     /// <summary>Tab expands snippet shortcuts such as ssf.</summary>
     public bool Snippets { get; init; } = true;
 
@@ -52,6 +55,7 @@ public sealed record HelperSettings
 
     public IReadOnlyDictionary<string, string> ToValues() => new Dictionary<string, string>
     {
+        [nameof(CompletionList)] = Format(CompletionList),
         [nameof(Snippets)] = Format(Snippets),
         [nameof(JoinAutoOpen)] = Format(JoinAutoOpen),
         [nameof(InsertHelper)] = Format(InsertHelper),
@@ -66,6 +70,7 @@ public sealed record HelperSettings
     /// <param name="get">Stored value for a name, or null when it was never saved.</param>
     public static HelperSettings FromValues(Func<string, string?> get) => new HelperSettings
     {
+        CompletionList = ReadBool(get, nameof(CompletionList), Default.CompletionList),
         Snippets = ReadBool(get, nameof(Snippets), Default.Snippets),
         JoinAutoOpen = ReadBool(get, nameof(JoinAutoOpen), Default.JoinAutoOpen),
         InsertHelper = ReadBool(get, nameof(InsertHelper), Default.InsertHelper),

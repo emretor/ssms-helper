@@ -87,6 +87,9 @@ internal static class IntelliSenseRefreshHook
 
             var key = SchemaService.Register(connection);
             StatusBar.Show($"reloading schema for {key}...");
+
+            // The database list after USE is refreshed too; a failure there only goes to the log.
+            Background.Run(() => SchemaService.Databases.ReloadAsync(key.Server), "Reloading the database list");
             Background.Run(async () =>
             {
                 try

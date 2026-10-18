@@ -24,6 +24,12 @@
       EXEC dbo.CountOrders                      -- an OUTPUT parameter
       EXEC dbo.PurgeOldOrders                   -- no parameters
 
+    Completion list (opens right after the space):
+      SELECT * FROM                             -- tables, then the view vOrders, then the function OrdersOf
+      SELECT * FROM ord                         -- filters: Orders first, then OrderLines, ...
+      UPDATE dbo.Orders SET                     -- updatable columns (no OrderId, RowVersion)
+      SELECT * FROM dbo.Orders o JOIN dbo.Customers c ON c.CustomerId = o.CustomerId WHERE   -- o.* and c.* columns
+
     WHERE safety check (select the line and press F5; Cancel stops it, OK really runs it):
       DELETE FROM dbo.Reviews                   -- asks first
       UPDATE p SET Name = '' FROM dbo.Products p -- asks first, names dbo.Products
@@ -115,6 +121,14 @@ CREATE PROCEDURE dbo.CountOrders
     @Total int OUTPUT
 AS
 SELECT @Total = COUNT(*) FROM dbo.Orders WHERE CustomerId = @CustomerId;
+GO
+CREATE VIEW dbo.vOrders AS
+SELECT o.OrderId, c.Name AS CustomerName, o.OrderDate, o.Status
+FROM dbo.Orders o JOIN dbo.Customers c ON c.CustomerId = o.CustomerId;
+GO
+CREATE FUNCTION dbo.OrdersOf (@CustomerId int)
+RETURNS TABLE AS RETURN
+SELECT OrderId, OrderDate, Status FROM dbo.Orders WHERE CustomerId = @CustomerId;
 GO
 CREATE PROCEDURE dbo.PurgeOldOrders
 AS

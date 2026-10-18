@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SsmsHelper.Core.Metadata;
 
-/// <summary>Immutable snapshot of one database's user tables, views, foreign keys and stored procedures.</summary>
+/// <summary>Immutable snapshot of one database's user tables, views, foreign keys, stored procedures and table-valued functions.</summary>
 public sealed class DatabaseSchema
 {
     private readonly Dictionary<TableName, TableInfo> _tables;
@@ -12,8 +12,10 @@ public sealed class DatabaseSchema
     private readonly Dictionary<TableName, ProcedureInfo> _procedures;
 
     public DatabaseSchema(
-        IEnumerable<TableInfo> tables, IEnumerable<ForeignKeyInfo> foreignKeys, DateTimeOffset loadedAt, IEnumerable<ProcedureInfo>? procedures = null)
+        IEnumerable<TableInfo> tables, IEnumerable<ForeignKeyInfo> foreignKeys, DateTimeOffset loadedAt, IEnumerable<ProcedureInfo>? procedures = null,
+        IEnumerable<TableName>? tableFunctions = null)
     {
+        TableFunctions = (tableFunctions ?? Array.Empty<TableName>()).ToList();
         _tables = new Dictionary<TableName, TableInfo>();
         foreach (var table in tables)
         {
@@ -49,6 +51,9 @@ public sealed class DatabaseSchema
     public int ColumnCount => _tables.Values.Sum(t => t.Columns.Count);
 
     public IReadOnlyCollection<ProcedureInfo> Procedures => _procedures.Values;
+
+    /// <summary>Inline, multi-statement and CLR table-valued functions: the functions that can follow FROM.</summary>
+    public IReadOnlyList<TableName> TableFunctions { get; }
 
     public TableInfo? GetTable(TableName name) => _tables.TryGetValue(name, out var table) ? table : null;
 

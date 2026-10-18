@@ -59,7 +59,13 @@ GO
 CREATE PROCEDURE dbo.GetOrders @CustomerId int, @From datetime2(3) = NULL, @Status varchar(20) = 'New', @Total dbo.Money19 OUTPUT
 AS SELECT 1;
 GO
-CREATE PROCEDURE sales.Cleanup AS SELECT 1;";
+CREATE PROCEDURE sales.Cleanup AS SELECT 1;
+GO
+CREATE FUNCTION dbo.OrdersOf (@CustomerId int) RETURNS TABLE AS RETURN SELECT OrderId FROM dbo.Orders WHERE CustomerId = @CustomerId;
+GO
+CREATE FUNCTION sales.Totals () RETURNS @t TABLE (Total int) AS BEGIN INSERT @t VALUES (1); RETURN; END;
+GO
+CREATE FUNCTION dbo.Twice (@x int) RETURNS int AS BEGIN RETURN @x * 2; END;";
 
     public async ValueTask InitializeAsync()
     {
@@ -94,6 +100,19 @@ CREATE PROCEDURE sales.Cleanup AS SELECT 1;";
         SqlConnection.ClearAllPools();
         await ExecuteAsync(ServerConnectionString,
             $"IF DB_ID(N'{_database}') IS NOT NULL BEGIN ALTER DATABASE [{_database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{_database}]; END");
+    }
+
+    [Fact]
+    public async Task DatabaseList_HasTheTestDatabase_AndMarksSystemDatabases()
+    {
+        Assert.SkipWhen(ServerConnectionString is null, $"Set {EnvironmentVariable} to run SQL Server integration tests.");
+
+        await using var connection = new SqlConnection(DatabaseConnectionString());
+        var list = await DatabaseListLoader.LoadAsync(connection, DateTimeOffset.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains(list.Databases, d => d.Name == _database && !d.IsSystem);
+        Assert.Contains(list.Databases, d => d.Name == "master" && d.IsSystem);
+        Assert.False(list.Databases[0].IsSystem);
     }
 
     [Fact]
@@ -148,6 +167,9 @@ CREATE PROCEDURE sales.Cleanup AS SELECT 1;";
         Assert.True(getOrders.Parameters[3].IsOutput);
         Assert.False(getOrders.Parameters[0].IsOutput);
         Assert.Empty(schema.FindProcedure("sales", "Cleanup")!.Parameters);
+
+        // Inline and multi-statement table-valued functions; not the scalar one.
+        Assert.Equal(new[] { "dbo.OrdersOf", "sales.Totals" }, schema.TableFunctions.Select(f => f.ToString()).OrderBy(n => n, StringComparer.Ordinal));
     }
 
     private string DatabaseConnectionString() =>

@@ -8,6 +8,7 @@ public class HelperSettingsTests
     public void Defaults_HaveEverythingOn_AndThirtyMinuteCache()
     {
         var settings = HelperSettings.Default;
+        Assert.True(settings.CompletionList);
         Assert.True(settings.Snippets);
         Assert.True(settings.JoinAutoOpen);
         Assert.True(settings.InsertHelper);
@@ -28,7 +29,7 @@ public class HelperSettingsTests
     [Fact]
     public void RoundTrips()
     {
-        var settings = new HelperSettings { Snippets = false, ExecHelper = false, ScriptObject = false, WhereSafetyCheck = false, RefreshWithIntelliSense = false, SchemaCacheMinutes = 90 };
+        var settings = new HelperSettings { CompletionList = false, Snippets = false, ExecHelper = false, ScriptObject = false, WhereSafetyCheck = false, RefreshWithIntelliSense = false, SchemaCacheMinutes = 90 };
         var values = settings.ToValues();
         Assert.Equal(settings, HelperSettings.FromValues(name => values.TryGetValue(name, out var v) ? v : null));
     }

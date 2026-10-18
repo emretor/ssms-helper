@@ -14,6 +14,12 @@ public sealed class GeneralOptionsPage : DialogPage
     private const string Schema = "Schema";
 
     [Category(Helpers)]
+    [DisplayName("Completion list")]
+    [Description("Our fast list: tables, views and table functions after FROM / JOIN / INTO / UPDATE, procedures after EXEC, columns after UPDATE ... SET and in WHERE, keywords after SELECT *. Everywhere else, and when this is off, SSMS's own list.")]
+    [DefaultValue(true)]
+    public bool CompletionList { get; set; } = true;
+
+    [Category(Helpers)]
     [DisplayName("Snippets")]
     [Description("Tab expands snippet shortcuts such as ssf, ii, upd, df and bt.")]
     [DefaultValue(true)]
@@ -71,6 +77,7 @@ public sealed class GeneralOptionsPage : DialogPage
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var settings = SettingsStore.Current;
+        CompletionList = settings.CompletionList;
         Snippets = settings.Snippets;
         JoinAutoOpen = settings.JoinAutoOpen;
         InsertHelper = settings.InsertHelper;
@@ -87,6 +94,7 @@ public sealed class GeneralOptionsPage : DialogPage
         ThreadHelper.ThrowIfNotOnUIThread();
         SettingsStore.Save(new HelperSettings
         {
+            CompletionList = CompletionList,
             Snippets = Snippets,
             JoinAutoOpen = JoinAutoOpen,
             InsertHelper = InsertHelper,

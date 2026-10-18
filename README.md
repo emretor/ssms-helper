@@ -9,6 +9,7 @@ Productivity helpers for SQL Server Management Studio 22, in the spirit of Redga
 - **Expand `*`**: Tab right after the `*` in `SELECT * FROM ...` replaces it with the column list, one per line;
   Shift+Enter writes the compact form.
 
+- **Completion list**: a fast, clean list of tables right after `FROM ` (columns after `SET ` / `WHERE `), best match pre-selected.
 - **Options**: Tools > Options > SSMS Helper turns each helper on or off and sets the schema cache time.
 - **Surround with Transaction**: wraps the selection in BEGIN TRANSACTION ... ROLLBACK (COMMIT commented out).
 - **F12**: opens the ALTER script of a procedure, view or function, or the CREATE script of a table, in a new window.

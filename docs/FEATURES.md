@@ -1,7 +1,8 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.10.3, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.11.4, SSMS 22.
 
+- [Completion list](#completion-list)
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
 - [INSERT helper](#insert-helper)
@@ -23,6 +24,44 @@ All helpers work in SSMS query windows (and `.sql` files). The JOIN and INSERT h
 query window's current connection, so the window must be connected and on the right database (check the
 database dropdown on the toolbar).
 
+## Completion list
+
+A fast list of what fits at the caret, filled from SSMS Helper's in-memory schema (no database call while you
+type). It opens **right after the space**, without Ctrl+J:
+
+| You type | The list shows |
+|---|---|
+| `FROM ` / `JOIN ` / `INSERT INTO ` / `UPDATE ` / `DELETE FROM ` | Tables, then views, then table-valued functions, with schema (`dbo.Orders`). No roles, schemas or system objects |
+| `EXEC ` | Stored procedures |
+| `UPDATE dbo.Orders SET ` (and after each `, ` in the SET list) | The columns you can update: no identity, computed or rowversion columns |
+| `... WHERE ` (and after `AND ` / `OR ` / `(` in the WHERE clause) | The columns of the tables in the statement, with their types |
+| `o.` (an alias or table name of the statement, anywhere: SELECT list, ON, WHERE, ...) | The columns of that table, right after the dot |
+| `SELECT * ` | Keywords: `FROM`, `INTO`, then statement keywords |
+| `USE ` | The server's databases you can open: yours by name, then `master`, `model`, `msdb`, `tempdb` ("system"). Offline databases are left out |
+
+- **Typing filters** the list: names that contain what you typed, names that start with it first (shorter names
+  first). `gam` finds `dbo.Games`, then `dbo.VideoGames`. With a dot, the whole name is matched (`sales.ord`).
+- **The best match is always selected**: Enter or Tab inserts it, no arrow keys needed. Arrows move the selection,
+  Esc closes the list. While the list is open, Enter picks; press Enter again for a new line.
+- **A pick replaces the whole name at the caret**: with the caret just left of `a` in `WHERE a`, Ctrl+Space and
+  `AddressId` gives `WHERE AddressId`, not `WHERE AddressIda`.
+- **The list closes** as soon as nothing matches what you typed.
+- **In a WHERE clause** columns are inserted with the table's alias (`o.OrderId`). With several tables and no
+  alias, the table name is used (`Orders.OrderId`); one table without an alias gives just `OrderId`. After
+  `UPDATE ... SET` and after `o.` names go in without a prefix.
+- **A space ends a name and opens the next list**: `SELECT * from` + space closes the keyword list and opens the
+  table list.
+- **Snippets open it too**: `ssf`, `st100`, `scf`, `ii`, `upd`, `df` + Tab leave the caret where a table goes,
+  and the list opens there.
+- **Picking a table after `INSERT INTO`** or **a procedure after `EXEC`** with Enter or Tab then runs the INSERT /
+  EXEC helper as before (Shift+Enter gives the compact form).
+- **Everywhere else** (`dbo.` outside FROM, `ON `, `ORDER BY`, functions, variables, ...) SSMS's own IntelliSense list works as
+  before. SSMS's red error underlines and tooltips are not affected.
+- The first time on a database the list waits for the schema to load (`loading schema for ...` in the status bar)
+  and then opens by itself, as long as you have not typed or moved meanwhile. The status bar then says
+  `schema for ... loaded.`
+- Turn it off under [Options](#options) (**Completion list**) to get SSMS's list everywhere.
+
 ## Snippets
 
 Type a shortcut and press **Tab**.
@@ -33,8 +72,8 @@ Type a shortcut and press **Tab**.
 | `st100` | `SELECT TOP (100) * FROM ` |
 | `scf` | `SELECT COUNT(*) FROM ` |
 | `ii` | `INSERT INTO ` |
-| `upd` | `UPDATE`, an indented empty line for the caret, `SET `, `WHERE ` |
-| `df` | `DELETE FROM`, an indented empty line for the caret, `WHERE ` |
+| `upd` | `UPDATE`, an indented empty line for the caret, `SET`, `WHERE` |
+| `df` | `DELETE FROM`, an indented empty line for the caret, `WHERE` |
 | `cte` | `WITH cte AS ( ... ) SELECT * FROM cte;` with the caret inside the parentheses |
 | `bt` | `BEGIN TRANSACTION;`, an empty line for the caret, then commented `COMMIT` and `ROLLBACK` |
 
@@ -47,7 +86,8 @@ WHERE                      SET
 ```
 
 The caret line takes a table name or a whole query; `WHERE` is always there and left empty on purpose, as a
-reminder not to run an UPDATE or DELETE on the whole table.
+reminder not to run an UPDATE or DELETE on the whole table. `SET` and `WHERE` have no trailing space: go to the end
+of the line and type the space yourself, and the column list opens.
 
 - Shortcuts are case-insensitive (`SSF` works too).
 - The caret lands where you continue typing (after `FROM`, inside the CTE, and so on).
@@ -349,6 +389,8 @@ This changes every row. Run anyway?
   helpers keep using the old schema until the new one has loaded (`schema for <server>/<db> loaded.`). Turn it off
   under [Options](#options).
 - **Tools > SSMS Helper: Refresh Schema** reloads only the SSMS Helper schema and reports the counts.
+- The database list after `USE ` is loaded per server, with one small query, the first time you type `USE `, and kept
+  as long as the schema. Ctrl+Shift+R reloads it too (for example after creating a database).
 - Schema changes are not detected automatically (SSM-52, postponed): after changing the schema, press Ctrl+Shift+R.
 - The extension opens its own connection with the window's credentials. It never runs anything in your query
   window's session.
@@ -359,6 +401,7 @@ This changes every row. Run anyway?
 
 | Setting | Default | What it switches |
 |---|---|---|
+| Completion list | On | Our list after `FROM ` / `JOIN ` / `INTO ` / `UPDATE ` / `EXEC `, `SET `, `WHERE `, `SELECT * `. Off: SSMS's list everywhere |
 | Snippets | On | Tab expands `ssf`, `ii`, `upd`, `df`, `bt`, ... |
 | JOIN list opens automatically | On | The ON list after `JOIN table alias ` and `ON `. Off: use the Suggest Join command |
 | INSERT helper | On | Tab / Shift+Enter / IntelliSense pick after `INSERT INTO table` |
@@ -394,6 +437,7 @@ All messages start with `SSMS Helper:`.
 |---|---|
 | `loading schema for <server>/<db> ...` | First use on this database; wait a moment |
 | `reloading schema for <server>/<db>...` | After Ctrl+Shift+R; the old schema keeps working meanwhile |
+| `loading the database list of <server>...` / `... loaded.` | First `USE ` on this server; the list opens when it is loaded |
 | `schema for <server>/<db> loaded.` | Loading finished |
 | `loading schema for ... failed: ...` | The extension could not read the catalog (permissions, connection) |
 | `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database |

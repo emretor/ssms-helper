@@ -88,5 +88,6 @@ internal static class SettingsStore
     {
         s_current = settings;
         SchemaService.Cache.TimeToLive = TimeSpan.FromMinutes(settings.SchemaCacheMinutes);
+        SchemaService.Databases.TimeToLive = TimeSpan.FromMinutes(settings.SchemaCacheMinutes);
     }
 }

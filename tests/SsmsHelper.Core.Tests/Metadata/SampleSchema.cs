@@ -38,6 +38,14 @@ internal sealed class SampleSchema
     private readonly List<(int Id, string Schema, string Name)> _procedures = new();
     private readonly List<(int ProcedureId, int Ordinal, string Name, string Type, string BaseType, short MaxLength, byte Precision, byte Scale, bool Output)> _parameters = new();
 
+    public DataTable TableFunctions { get; } = Table("SchemaName:string", "ObjectName:string");
+
+    public SampleSchema TableFunction(string schema, string name)
+    {
+        TableFunctions.Rows.Add(schema, name);
+        return this;
+    }
+
     public SampleSchema Procedure(int id, string schema, string name)
     {
         _procedures.Add((id, schema, name));
@@ -97,7 +105,7 @@ internal sealed class SampleSchema
 
     public Task<DatabaseSchema> LoadAsync(DateTimeOffset? loadedAt = null)
     {
-        using var reader = new DataTableReader(new[] { Objects, Columns, PrimaryKeys, ForeignKeys, ProcedureParameters() });
+        using var reader = new DataTableReader(new[] { Objects, Columns, PrimaryKeys, ForeignKeys, ProcedureParameters(), TableFunctions });
         return SchemaLoader.ReadAsync(reader, loadedAt ?? DateTimeOffset.UnixEpoch);
     }
 

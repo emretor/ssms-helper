@@ -67,7 +67,12 @@ FROM sys.procedures AS o
 JOIN sys.schemas AS s ON s.schema_id = o.schema_id
 LEFT JOIN sys.parameters AS p ON p.object_id = o.object_id AND p.parameter_id > 0
 WHERE o.is_ms_shipped = 0
-ORDER BY o.object_id, p.parameter_id;";
+ORDER BY o.object_id, p.parameter_id;
+
+SELECT s.name AS SchemaName, o.name AS ObjectName
+FROM sys.objects AS o
+JOIN sys.schemas AS s ON s.schema_id = o.schema_id
+WHERE o.type IN ('IF', 'TF', 'FT') AND o.is_ms_shipped = 0;";
 
     /// <summary>Opens the connection if needed, runs <see cref="Query"/> and builds the schema.</summary>
     public static async Task<DatabaseSchema> LoadAsync(DbConnection connection, DateTimeOffset loadedAt, int commandTimeoutSeconds = 60, CancellationToken cancellationToken = default)
@@ -193,7 +198,17 @@ ORDER BY o.object_id, p.parameter_id;";
             procedures.AddRange(order.Select(id => new ProcedureInfo(byId[id].Name, byId[id].Parameters)));
         }
 
-        return new DatabaseSchema(tables, foreignKeys, loadedAt, procedures);
+        // Table-valued functions, the sixth result set; also optional for older fakes.
+        var tableFunctions = new List<TableName>();
+        if (await reader.NextResultAsync(cancellationToken).ConfigureAwait(false))
+        {
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                tableFunctions.Add(new TableName(GetString(reader, "SchemaName"), GetString(reader, "ObjectName")));
+            }
+        }
+
+        return new DatabaseSchema(tables, foreignKeys, loadedAt, procedures, tableFunctions);
     }
 
     private static async Task NextResultAsync(DbDataReader reader, string what, CancellationToken cancellationToken)

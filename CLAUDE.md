@@ -13,8 +13,10 @@ foreign-key JOIN suggestions, and INSERT statement generation.
 2. Commit messages: imperative summary line, body explaining why, and `Refs SSM-<id>` lines.
 3. Push and open a merge request against `main` in the same step:
    ```
-   git push -u origin <branch> -o merge_request.create -o merge_request.target=main -o merge_request.title="<title>" -o merge_request.remove_source_branch
+   git push -u origin <branch> -o merge_request.create -o merge_request.target=main -o merge_request.title="<title>" -o merge_request.remove_source_branch -o merge_request.squash
    ```
+   `merge_request.squash` is needed: the project's "Encourage" squash setting only pre-ticks the box for MRs
+   created in the web UI, not for MRs created by a push.
    The user reviews and merges. Do not merge it yourself.
    To change an open MR's title or description (glab is not installed), push with
    `-o merge_request.title=... -o merge_request.description=...`; push options are only sent with a ref update,
@@ -152,6 +154,30 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - Key order: INSERT, SELECT *, EXEC, snippets.
 - An IntelliSense pick (Enter/Tab, Shift+Enter) expands like Tab via `ExecHelperController.AfterKey`, the same
   same-line/non-whitespace check and paired undo as the INSERT helper; it never starts a schema load.
+
+## Completion list notes (SSM-33)
+
+- Uses the editor's built-in async completion (`IAsyncCompletionSource` + `IAsyncCompletionItemManager`, content
+  type `SQL`). Verified in SSMS 22: where our source participates, SSMS's legacy list is not shown; where it returns
+  `DoesNotParticipateInCompletion`, SSMS's own list works as before. "Auto list members" does not need changing.
+- Core `Completion/CompletionContextAnalyzer` decides the context from a window of `Window` chars around the caret
+  (Objects / Procedures / Columns / Keywords); `CompletionMatcher` does contains-matching and ranking. Both are
+  measured: about 0.08 ms and 1.6 ms (10,000 tables) per keystroke. Keep new contexts in Core with tests.
+- Vsix `SqlCompletionSource`: object and procedure items are cached per `DatabaseSchema` instance
+  (ConditionalWeakTable); columns built per session. `SqlCompletionItemManager`: always hard-selects the best match,
+  dismisses when nothing matches.
+- Typed spaces trigger the list natively; snippets call `IntelliSenseSessions.OpenCompletion` after expanding.
+- Never participate with the schema still loading: a session waiting on the first load was dropped by the editor
+  (user saw no list on the first space). `OpenWhenLoaded` waits in the background and opens the list only if the
+  caret has not moved, and sets the status bar to "schema ... loaded".
+- A space typed into an open list (`SELECT * from` + space) does not start a new session natively; the item
+  manager dismisses and calls `SqlCompletionSource.Open` when the typed text has whitespace outside brackets.
+- `o.` resolves the alias (or unaliased table name) through `TableSources.Collect` over the statement; derived,
+  #temp and unknown qualifiers return null so SSMS's list handles them.
+- The schema load has a sixth result set: table-valued functions (IF, TF, FT).
+- `USE ` lists databases from `SchemaService.Databases`, a `LoadingCache<string server, ServerDatabases>` (Core
+  `Metadata/DatabaseListLoader`: sys.databases, state = 0, HAS_DBACCESS). `SchemaCache` is the same generic
+  `LoadingCache` keyed by `DatabaseKey`. Ctrl+Shift+R reloads both.
 
 ## Surround with Transaction notes
 

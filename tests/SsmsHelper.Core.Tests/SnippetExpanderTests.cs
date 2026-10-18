@@ -72,19 +72,19 @@ public class SnippetExpanderTests
     [Fact]
     public void MultiLine_IndentsToShortcutLine_AndUsesDocumentNewLine()
     {
-        Assert.Equal("    UPDATE\r\n        |\r\n    SET \r\n    WHERE ", Expand("    upd|", "\r\n"));
+        Assert.Equal("    UPDATE\r\n        |\r\n    SET\r\n    WHERE", Expand("    upd|", "\r\n"));
     }
 
     [Fact]
     public void Delete_CaretOnIndentedEmptyLine_EmptyWhere()
     {
-        Assert.Equal("DELETE FROM\n    |\nWHERE ", Expand("df|", "\n"));
+        Assert.Equal("DELETE FROM\n    |\nWHERE", Expand("df|", "\n"));
     }
 
     [Fact]
     public void Update_CaretOnIndentedEmptyLine_EmptySetAndWhere()
     {
-        Assert.Equal("UPDATE\n    |\nSET \nWHERE ", Expand("upd|", "\n"));
+        Assert.Equal("UPDATE\n    |\nSET\nWHERE", Expand("upd|", "\n"));
     }
 
     [Fact]

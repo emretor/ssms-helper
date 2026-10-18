@@ -113,6 +113,16 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
 
             if (settings.Snippets && key == EditorKey.Tab && SafeInvoke(TryExpandSnippet))
             {
+                // "ssf" + Tab leaves the caret after "FROM ": open the table list as typing the space would.
+                if (settings.CompletionList)
+                {
+                    SafeInvoke(() =>
+                    {
+                        _intelliSense.OpenCompletion(_view);
+                        return true;
+                    });
+                }
+
                 return VSConstants.S_OK;
             }
         }
