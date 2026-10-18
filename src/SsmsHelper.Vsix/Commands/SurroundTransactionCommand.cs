@@ -14,8 +14,9 @@ using Task = System.Threading.Tasks.Task;
 namespace SsmsHelper.Commands;
 
 /// <summary>
-/// Tools > SSMS Helper: Surround with Transaction (keyboard name Tools.SSMSHelperSurroundWithTransaction, no
-/// default key). Wraps the selected lines, or the caret line, in BEGIN TRANSACTION ... ROLLBACK as one undo step.
+/// Tools > SSMS Helper: Surround with Transaction (Ctrl+K, Ctrl+T by default, keyboard name
+/// Tools.SSMSHelperSurroundWithTransaction). Wraps the selected lines, or the caret line, in
+/// BEGIN TRANSACTION ... ROLLBACK as one undo step.
 /// </summary>
 internal static class SurroundTransactionCommand
 {

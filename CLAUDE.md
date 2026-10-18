@@ -156,8 +156,8 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 ## Surround with Transaction notes
 
 - Core `Transactions/TransactionWrapper.Wrap(lines, newLine)`; Vsix `Commands/SurroundTransactionCommand` takes the
-  stream selection's whole lines (or the caret line), one `ITextEdit`. A plain menu command with no default key and
-  no setting: it only runs when invoked.
+  stream selection's whole lines (or the caret line), one `ITextEdit`. A menu command with a vsct default key (Ctrl+K, Ctrl+T)
+  and no setting: it only runs when invoked.
 
 ## F12 Script Object notes
 

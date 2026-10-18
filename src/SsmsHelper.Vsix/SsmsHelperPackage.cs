@@ -13,7 +13,7 @@ namespace SsmsHelper;
 /// Editor features will be MEF components and load independently of this package.
 /// </summary>
 [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-[InstalledProductRegistration("SSMS Helper", "Snippets and code helpers for SSMS", "0.10.2")]
+[InstalledProductRegistration("SSMS Helper", "Snippets and code helpers for SSMS", "0.10.3")]
 [ProvideMenuResource("Menus.ctmenu", 1)]
 [ProvideOptionPage(typeof(GeneralOptionsPage), "SSMS Helper", "General", 0, 0, true)]
 [Guid(PackageIds.PackageGuidString)]

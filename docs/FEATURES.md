@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.10.2, SSMS 22.
+What every feature does, how to trigger it, and what to expect. Version 0.10.3, SSMS 22.
 
 - [Snippets](#snippets)
 - [JOIN helper](#join-helper)
@@ -60,7 +60,7 @@ reminder not to run an UPDATE or DELETE on the whole table.
 ### Surround with Transaction
 
 Select statements (or put the caret on a one-line statement) and run **Tools > SSMS Helper: Surround with
-Transaction**. There is no default key; bind one under Tools > Options > Environment > Keyboard, command
+Transaction**, or press **Ctrl+K, Ctrl+T**. Rebind it under Tools > Options > Environment > Keyboard, command
 `Tools.SSMSHelperSurroundWithTransaction`.
 
 ```sql
@@ -377,7 +377,7 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 |---|---|
 | SSMS Helper: Suggest Join | Opens the JOIN list at the caret (keyboard name `Tools.SSMSHelperSuggestJoin`) |
 | SSMS Helper: Script Object | F12: ALTER / CREATE script of the object under the caret in a new window |
-| SSMS Helper: Surround with Transaction | Wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK (no default key) |
+| SSMS Helper: Surround with Transaction | Ctrl+K, Ctrl+T: wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK |
 | SSMS Helper: Refresh Schema | Reloads the current database's schema |
 | SSMS Helper: About | Shows the extension version, the SSMS version and the .NET runtime |
 
