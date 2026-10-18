@@ -49,6 +49,16 @@ developer machine has a local SQL Server, so use
 touches metadata queries.
 
 Output: `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`. Install by closing SSMS and double-clicking the file.
+
+SSMS 21 (SSM-57, best effort, the user agreed): `dotnet build src/SsmsHelper.Vsix -c Release -p:SsmsVersion=21`
+(also installed on the dev machine) gives `bin/Release/net48/ssms21/SsmsHelper.Ssms21.vsix`, compiled against SSMS
+21's assemblies (SqlWorkbench 21.200, SMO 17.100, SqlClient 5.0; no redirects from 22's versions, so one DLL
+cannot serve both). The csproj writes a manifest with `[21.0,22.0)` to obj and swaps it in after
+`FindSourceVsixManifest`; same extension Id and version. Build and hand over both packages when a change could
+behave differently in 21. Tell the user to install the SSMS 22 package first: SSMS 22's installer also offers the
+SSMS 21 package for SSMS 22 (it accepts SSMS 21 extensions), unless 22 already has the same version. Checked against SSMS 21.6: command ids (Execute 1, Refresh Local Cache 70, grid menu
+{33F13AC3-...}/112) and the grid members match, except `GetGridControl(i)` / `GetResultSet(i)`, which SSMS 21
+lacks; `ResultsGridReader` falls back to the grid's `Tag` (its index there).
 The VSIX Installer will not reinstall the same version, so bump the version for every build the user should install.
 It also refuses a lower version: always go above the highest version the user has installed, including builds from
 abandoned branches (0.7.1 from a dropped branch made 0.6.5 uninstallable; the next build became 0.7.2).

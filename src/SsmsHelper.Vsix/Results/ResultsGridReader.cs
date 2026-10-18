@@ -62,6 +62,12 @@ internal static class ResultsGridReader
             }
         }
 
+        // SSMS 21 has no GetGridControl(i); its grids carry their index in Control.Tag (GridResultsTabPage.AddGridContainer).
+        if (resultIndex < 0 && Property(grid, "Tag") is int tag && tag >= 0 && tag < gridCount)
+        {
+            resultIndex = tag;
+        }
+
         var resultSet = (resultIndex >= 0 ? Invoke(page, "GetResultSet", resultIndex) : null) ??
                         Invoke(page, "GetGridResultSet", grid) ??
                         throw Missing("the result set");

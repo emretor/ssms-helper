@@ -37,10 +37,14 @@
     <ProjectReference Include="..\SsmsHelper.Core\SsmsHelper.Core.csproj" />
   </ItemGroup>
 
-  <!-- SSMS assemblies, referenced compile-only from a local SSMS 22 install so the host's copies are
-       used at runtime. Override with -p:SsmsIdeDir=... when SSMS is installed elsewhere. -->
+  <!-- SSMS assemblies, referenced compile-only from a local SSMS install so the host's copies are
+       used at runtime. Override with -p:SsmsIdeDir=... when SSMS is installed elsewhere.
+       -p:SsmsVersion=21 builds the SSMS 21 VSIX (SSM-57, best effort): SSMS 21's assemblies have other major
+       versions (SqlWorkbench 21.200, SMO 17.100, SqlClient 5) and no redirects from 22's, so it needs its own build.
+       Output: bin\<Configuration>\net48\ssms21\SsmsHelper.Ssms21.vsix. -->
   <PropertyGroup>
-    <SsmsIdeDir Condition="'$(SsmsIdeDir)' == ''">$(ProgramFiles)\Microsoft SQL Server Management Studio 22\Release\Common7\IDE</SsmsIdeDir>
+    <SsmsVersion Condition="'$(SsmsVersion)' == ''">22</SsmsVersion>
+    <SsmsIdeDir Condition="'$(SsmsIdeDir)' == ''">$(ProgramFiles)\Microsoft SQL Server Management Studio $(SsmsVersion)\Release\Common7\IDE</SsmsIdeDir>
     <!-- SSMS assemblies reference Visual Studio 18.x assemblies while the SDK package provides 17.14.
          SSMS's own binding redirects unify them at runtime, so the compile-time conflicts are noise. -->
     <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
@@ -63,7 +67,30 @@
 
   <Target Name="CheckSsmsInstall" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="!Exists('$(SsmsIdeDir)\SqlWorkbench.Interfaces.dll')"
-           Text="SSMS 22 assemblies not found in '$(SsmsIdeDir)'. Install SSMS 22 or pass -p:SsmsIdeDir=&lt;path to Common7\IDE&gt;." />
+           Text="SSMS $(SsmsVersion) assemblies not found in '$(SsmsIdeDir)'. Install SSMS $(SsmsVersion) or pass -p:SsmsIdeDir=&lt;path to Common7\IDE&gt;." />
+  </Target>
+
+  <!-- The SSMS 21 build: own output and intermediate folders, its own VSIX name, and a manifest that targets
+       SSMS 21 instead of 22. Same extension Id: each SSMS has its own extension list. -->
+  <PropertyGroup Condition="'$(SsmsVersion)' != '22'">
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\$(TargetFramework)\ssms$(SsmsVersion)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\$(TargetFramework)\ssms$(SsmsVersion)\</IntermediateOutputPath>
+    <TargetVsixContainerName>SsmsHelper.Ssms$(SsmsVersion).vsix</TargetVsixContainerName>
+  </PropertyGroup>
+
+  <Target Name="SsmsVersionManifest" AfterTargets="FindSourceVsixManifest" Condition="'$(SsmsVersion)' != '22'">
+    <PropertyGroup>
+      <_SsmsManifestText>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\source.extension.vsixmanifest'))</_SsmsManifestText>
+      <_SsmsManifestText>$(_SsmsManifestText.Replace('Version="[22.0,23.0)"', 'Version="[$(SsmsVersion).0,$([MSBuild]::Add($(SsmsVersion), 1)).0)"'))</_SsmsManifestText>
+      <_SsmsManifestFile>$(IntermediateOutputPath)source.extension.vsixmanifest</_SsmsManifestFile>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <WriteLinesToFile File="$(_SsmsManifestFile)" Lines="$([MSBuild]::Escape($(_SsmsManifestText)))" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <SourceVsixManifest Remove="@(SourceVsixManifest)" />
+      <SourceVsixManifest Include="$(_SsmsManifestFile)" />
+    </ItemGroup>
   </Target>
 
   <ItemGroup>

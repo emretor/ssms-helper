@@ -46,6 +46,7 @@ which is a .NET Framework process. Modern .NET cannot be loaded in-process.
 - SSMS 22, both to run the extension and to build it: the project references SSMS's own assemblies
   from `C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE`.
   Pass `-p:SsmsIdeDir=<path to Common7\IDE>` if SSMS is installed elsewhere.
+- SSMS 21 too, only to build the SSMS 21 package (see below).
 
 ## Build and test
 
@@ -64,16 +65,33 @@ dotnet test --project tests/SsmsHelper.Core.Tests
 
 The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`.
 
-## Install into SSMS 22
+### SSMS 21 (best effort)
+
+SSMS 21 ships other versions of SSMS's assemblies, so it needs its own build of the same code:
+
+```powershell
+dotnet build src/SsmsHelper.Vsix -c Release -p:SsmsVersion=21
+```
+
+The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/ssms21/SsmsHelper.Ssms21.vsix` and installs into
+SSMS 21 only. Features are developed and checked in SSMS 22 first; SSMS 21 gets the same code, and anything
+that relies on SSMS internals may not work there.
+
+## Install into SSMS 22 (or 21)
 
 1. Close SSMS.
-2. Double-click `SsmsHelper.vsix`. The VSIX Installer lists SSMS 22 as a target.
+2. Double-click `SsmsHelper.vsix` (SSMS 22) or `SsmsHelper.Ssms21.vsix` (SSMS 21). The VSIX Installer lists the
+   SSMS version as a target.
    If the installer does not open, right-click the file and choose
    **Open with > Microsoft Visual Studio Version Selector**.
+   `SsmsHelper.Ssms21.vsix` is also offered for SSMS 22: SSMS 22 accepts extensions made for SSMS 21 (as Visual
+   Studio 2026 does for 2022), whatever the package's version range says. **Untick SSMS 22** there; the SSMS 21
+   build cannot load in SSMS 22. `SsmsHelper.vsix` is offered for SSMS 22 only. Installing `SsmsHelper.vsix` first
+   avoids this: SSMS 22 then already has that version and is left out of the SSMS 21 package's list.
 3. Start SSMS and open **Tools > SSMS Helper: About**.
 
 The extension is installed per user under
-`%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>`.
+`%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>` (`21.0_<id>` for SSMS 21).
 
 ## Uninstall
 
