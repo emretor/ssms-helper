@@ -40,7 +40,7 @@ internal static class ExecuteGuard
             s_executeEvents.BeforeExecute += OnBeforeExecute;
         }
 
-        // Execute from the results grid or the toolbar still runs the editor that had focus last.
+        // Fallback only: Execute runs the active document, which OnBeforeExecute asks for first.
         if (view.HasAggregateFocus)
         {
             s_lastFocused = view;
@@ -61,7 +61,8 @@ internal static class ExecuteGuard
         ThreadHelper.ThrowIfNotOnUIThread();
         try
         {
-            var view = s_lastFocused;
+            // Execute runs the active document, also from its results grid, whose clicks never focus the editor.
+            var view = ActiveDocument.TextView() ?? s_lastFocused;
             if (view is null || view.IsClosed)
             {
                 return;

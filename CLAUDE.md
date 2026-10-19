@@ -242,8 +242,10 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - `Vsix/Editor/ExecuteGuard` hooks Query.Execute ({52692960-56BC-4989-B5D3-94C47A513E8D}, id 1, from
   `SQLWorkbenchCommands` in SQLEditors.dll) via DTE `CommandEvents.BeforeExecute` and sets `CancelDefault`. The text
   view command filter never sees Execute. The DTE event object must stay referenced (static field).
-- The executed text comes from the last focused SQL view (selection or whole buffer), so Execute from the toolbar
-  or results grid checks the right editor. Any exception is logged and execution goes ahead.
+- The executed text comes from the active document's editor (`Editor/ActiveDocument`: SEID_DocumentFrame, doc view
+  as IVsCodeWindow, last active pane), the window Execute runs, also from its results grid (grid clicks never focus
+  the text view). The last focused SQL view is only a fallback (SSM-59). Selection or whole buffer. Any exception is
+  logged and execution goes ahead.
 
 ## Options notes
 

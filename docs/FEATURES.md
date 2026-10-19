@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.6, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.7, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -443,6 +443,8 @@ This changes every row. Run anyway?
   says `execution cancelled.`
 - It checks what SSMS runs: the selection, or the whole script when nothing is selected. Up to five statements are
   listed.
+- It checks the window that executes, also when you press F5 with the focus in that window's results grid or in a
+  tool window such as Object Explorer.
 - Still warns for `UPDATE ... FROM ... JOIN` without `WHERE`, and names the table behind an alias
   (`UPDATE o ... FROM dbo.Orders o` says `dbo.Orders`).
 - Leaves alone: temp tables (`#work`) and table variables (`@rows`), `TRUNCATE TABLE`, statements inside
