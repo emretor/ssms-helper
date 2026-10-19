@@ -123,6 +123,9 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   authentication type SSMS supports works. The extension always opens its own connection, never the window's.
 - `SchemaService.Cache` (Core `SchemaCache`) is the single process-wide cache. UI code calls `TryGet` (never blocks,
   may return stale or null and starts a background load); commands may `await GetAsync`/`RefreshAsync`.
+- After a failed load, `LoadingCache` does not load that key again from `TryGet`/`GetAsync` for `RetryAfter` (30 s):
+  `GetAsync` returns the stale value or rethrows the last error. `ReloadAsync`/`RefreshAsync` (Ctrl+Shift+R, Refresh
+  Schema) retry at once (SSM-60: a wrong password used to open a connection per keystroke).
 - `SchemaLoader.Query` must stay compatible with SQL Server 2012+ and Azure SQL. Avoid newer catalog columns
   directly; use `COLUMNPROPERTY` or similar functions that return NULL on older versions.
 

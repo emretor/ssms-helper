@@ -7,8 +7,10 @@ namespace SsmsHelper.Core.Metadata;
 
 /// <summary>
 /// Cache of values loaded in the background (a database's schema, a server's database list). Concurrent requests
-/// for the same key share one load, stale entries keep serving until a refresh completes, and failed loads are
-/// retried on the next request. Thread-safe; never blocks the caller while loading.
+/// for the same key share one load, and stale entries keep serving until a refresh completes. A failed load is not
+/// retried by <see cref="TryGet"/> or <see cref="GetAsync"/> for <see cref="RetryAfter"/>, so a wrong password does not
+/// open a connection per keystroke; <see cref="ReloadAsync"/> and <see cref="RefreshAsync"/> retry at once.
+/// Thread-safe; never blocks the caller while loading.
 /// </summary>
 public class LoadingCache<TKey, TValue>
     where TKey : notnull
@@ -41,19 +43,23 @@ public class LoadingCache<TKey, TValue>
 
     public TimeSpan TimeToLive { get; set; }
 
+    /// <summary>How long after a failed load <see cref="TryGet"/> and <see cref="GetAsync"/> wait before loading again.</summary>
+    public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(30);
+
     /// <summary>Raised on the loading thread when a load fails.</summary>
     public event Action<TKey, Exception>? LoadFailed;
 
     /// <summary>
     /// Returns the cached value immediately, even if stale, or null if none is loaded yet.
-    /// Starts a background load when the entry is missing or stale. Use this from UI code.
+    /// Starts a background load when the entry is missing or stale, unless the last load failed within
+    /// <see cref="RetryAfter"/>. Use this from UI code.
     /// </summary>
     public TValue? TryGet(TKey key)
     {
         lock (_gate)
         {
             var entry = GetOrAddEntry(key);
-            if (entry.Value is null || IsStale(entry))
+            if ((entry.Value is null || IsStale(entry)) && !IsBackingOff(entry))
             {
                 StartLoad(key, entry);
             }
@@ -62,7 +68,10 @@ public class LoadingCache<TKey, TValue>
         }
     }
 
-    /// <summary>Returns a fresh value, waiting for a load if the entry is missing or stale.</summary>
+    /// <summary>
+    /// Returns a fresh value, waiting for a load if the entry is missing or stale. Within <see cref="RetryAfter"/> of
+    /// a failed load it does not load: it returns the stale value if there is one, or fails with the last error.
+    /// </summary>
     public Task<TValue> GetAsync(TKey key, CancellationToken cancellationToken = default)
     {
         Task<TValue> pending;
@@ -72,6 +81,11 @@ public class LoadingCache<TKey, TValue>
             if (entry.Value is not null && !IsStale(entry))
             {
                 return Task.FromResult(entry.Value);
+            }
+
+            if (IsBackingOff(entry))
+            {
+                return entry.Value is not null ? Task.FromResult(entry.Value) : Task.FromException<TValue>(entry.Failure!);
             }
 
             pending = StartLoad(key, entry);
@@ -132,6 +146,10 @@ public class LoadingCache<TKey, TValue>
 
     private bool IsStale(Entry entry) => entry.Value is not null && _clock() - _loadedAt(entry.Value) >= TimeToLive;
 
+    // A load in flight is joined, not blocked.
+    private bool IsBackingOff(Entry entry) =>
+        entry.Loading is null && entry.Failure is not null && _clock() - entry.FailedAt < RetryAfter;
+
     // Caller holds _gate.
     private Task<TValue> StartLoad(TKey key, Entry entry)
     {
@@ -155,6 +173,7 @@ public class LoadingCache<TKey, TValue>
             lock (_gate)
             {
                 entry.Loading = null;
+                entry.Failure = null;
 
                 // Results for entries invalidated while loading are returned but not cached.
                 if (_entries.TryGetValue(key, out var current) && ReferenceEquals(current, entry))
@@ -170,6 +189,8 @@ public class LoadingCache<TKey, TValue>
             lock (_gate)
             {
                 entry.Loading = null;
+                entry.Failure = ex;
+                entry.FailedAt = _clock();
             }
 
             LoadFailed?.Invoke(key, ex);
@@ -201,5 +222,10 @@ public class LoadingCache<TKey, TValue>
         public TValue? Value { get; set; }
 
         public Task<TValue>? Loading { get; set; }
+
+        /// <summary>The last load's error, until a load succeeds.</summary>
+        public Exception? Failure { get; set; }
+
+        public DateTimeOffset FailedAt { get; set; }
     }
 }

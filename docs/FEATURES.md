@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.7, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.9, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -469,6 +469,9 @@ This changes every row. Run anyway?
 - The database list after `USE ` is loaded per server, with one small query, the first time you type `USE `, and kept
   as long as the schema. Ctrl+Shift+R reloads it too (for example after creating a database).
 - Schema changes are not detected automatically (SSM-52, postponed): after changing the schema, press Ctrl+Shift+R.
+- When loading fails (wrong password, disabled login, server down), the helpers wait 30 seconds before trying that
+  database again, so typing does not open a connection per key (or lock out the login). Until then they repeat the
+  last error, and a schema loaded earlier keeps working. Ctrl+Shift+R or Refresh Schema tries again at once.
 - The extension opens its own connection with the window's credentials. It never runs anything in your query
   window's session.
 
@@ -520,7 +523,7 @@ All messages start with `SSMS Helper:`.
 | `reloading schema for <server>/<db>...` | After Ctrl+Shift+R; the old schema keeps working meanwhile |
 | `loading the database list of <server>...` / `... loaded.` | First `USE ` on this server; the list opens when it is loaded |
 | `schema for <server>/<db> loaded.` | Loading finished |
-| `loading schema for ... failed: ...` | The extension could not read the catalog (permissions, connection) |
+| `loading schema for ... failed: ...` | The extension could not read the catalog (permissions, connection). Tried again after 30 seconds, or at once with Ctrl+Shift+R |
 | `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database |
 | `<table> not found in <db>.` | INSERT: unknown table (also shown while IntelliSense is still completing a name) |
 | `INSERT for <table>; skipped ...` | INSERT done; lists skipped server-generated columns |

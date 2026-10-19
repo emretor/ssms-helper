@@ -84,7 +84,7 @@ public class SchemaCacheTests
     }
 
     [Fact]
-    public async Task FailedLoad_IsReported_AndRetriedNextTime()
+    public async Task FailedLoad_IsReported_AndRetriedAfterTheBackoff()
     {
         var attempt = 0;
         var cache = new SchemaCache((_, _) =>
@@ -98,8 +98,77 @@ public class SchemaCacheTests
         await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
         Assert.IsType<TimeoutException>(reported);
 
+        _now += cache.RetryAfter;
         Assert.NotNull(await cache.GetAsync(Key, Ct));
         Assert.Equal(2, attempt);
+    }
+
+    [Fact]
+    public async Task FailedLoad_IsNotRetried_ByTryGetOrGetAsync_WithinTheBackoff()
+    {
+        var loads = 0;
+        var cache = new SchemaCache((_, _) => { loads++; return Task.FromException<DatabaseSchema>(new TimeoutException("login failed")); }, Ttl, () => _now);
+
+        await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
+        for (var keystroke = 0; keystroke < 20; keystroke++)
+        {
+            Assert.Null(cache.TryGet(Key));
+        }
+
+        _now += cache.RetryAfter - TimeSpan.FromSeconds(1);
+        var ex = await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
+        Assert.Equal("login failed", ex.Message); // the last error, not a new attempt
+        Assert.Equal(1, loads);
+    }
+
+    [Fact]
+    public async Task FailedRefresh_KeepsServingTheStaleSchema_WithoutRetrying()
+    {
+        var loads = 0;
+        var cache = new SchemaCache((_, _) => ++loads == 1 ? Task.FromResult(Schema()) : Task.FromException<DatabaseSchema>(new TimeoutException()), Ttl, () => _now);
+        var old = await cache.GetAsync(Key, Ct);
+
+        _now += Ttl;
+        await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
+
+        Assert.Same(old, cache.TryGet(Key));
+        Assert.Same(old, await cache.GetAsync(Key, Ct));
+        Assert.Equal(2, loads);
+    }
+
+    [Fact]
+    public async Task ReloadAsync_IgnoresTheBackoff()
+    {
+        var loads = 0;
+        var cache = new SchemaCache((_, _) => ++loads == 1 ? Task.FromException<DatabaseSchema>(new TimeoutException()) : Task.FromResult(Schema()), Ttl, () => _now);
+        await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
+
+        Assert.NotNull(await cache.ReloadAsync(Key, Ct));
+        Assert.Equal(2, loads);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_IgnoresTheBackoff()
+    {
+        var loads = 0;
+        var cache = new SchemaCache((_, _) => ++loads == 1 ? Task.FromException<DatabaseSchema>(new TimeoutException()) : Task.FromResult(Schema()), Ttl, () => _now);
+        await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
+
+        Assert.NotNull(await cache.RefreshAsync(Key, Ct));
+        Assert.Equal(2, loads);
+    }
+
+    [Fact]
+    public async Task SuccessfulLoad_ClearsTheFailure()
+    {
+        var loads = 0;
+        var cache = new SchemaCache((_, _) => ++loads == 1 ? Task.FromException<DatabaseSchema>(new TimeoutException()) : Task.FromResult(Schema()), Ttl, () => _now);
+        await Assert.ThrowsAsync<TimeoutException>(() => cache.GetAsync(Key, Ct));
+        await cache.ReloadAsync(Key, Ct);
+
+        _now += Ttl; // stale again: refreshed at once, no backoff left over
+        await cache.GetAsync(Key, Ct);
+        Assert.Equal(3, loads);
     }
 
     [Fact]

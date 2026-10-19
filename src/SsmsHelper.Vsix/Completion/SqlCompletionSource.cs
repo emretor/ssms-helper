@@ -223,12 +223,22 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
     /// </summary>
     private void OpenWhenLoaded(string what, Func<Task> load, SnapshotPoint triggerLocation)
     {
-        StatusBar.Show($"loading {what}...");
+        // Within the retry wait after a failure the task is already faulted: show only the error, not "loading" too,
+        // which would flicker on every key.
+        var loading = load();
+        if (!loading.IsCompleted)
+        {
+            StatusBar.Show($"loading {what}...");
+        }
+
         Background.Run(async () =>
         {
             try
             {
-                await load().ConfigureAwait(false);
+                // The cache's load runs on the thread pool (Task.Run) and never needs the UI thread: no deadlock.
+#pragma warning disable VSTHRD003
+                await loading.ConfigureAwait(false);
+#pragma warning restore VSTHRD003
             }
             catch (Exception ex)
             {
