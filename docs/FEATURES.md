@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.5, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.6, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -55,7 +55,7 @@ type). It opens **right after the space**, without Ctrl+J:
   `UPDATE ... SET` and after `o.` names go in without a prefix.
 - **A space ends a name and opens the next list**: `SELECT * from` + space closes the keyword list and opens the
   table list.
-- **Snippets open it too**: `ssf`, `st100`, `stl`, `scf`, `ii`, `upd`, `df` + Tab leave the caret where a table goes,
+- **Snippets open it too**: `ssf`, `st100`, `stl`, `scf`, `ii`, `upd`, `df`, `ij`, `lj` + Tab leave the caret where a table goes,
   and the list opens there.
 - **Picking a table after `INSERT INTO`** or **a procedure after `EXEC`** with Enter or Tab then runs the INSERT /
   EXEC helper as before (Shift+Enter gives the compact form).
@@ -81,6 +81,12 @@ Type a shortcut and press **Tab**.
 | `df` | `DELETE FROM`, an indented empty line for the caret, `WHERE` |
 | `cte` | `WITH cte AS ( ... ) SELECT * FROM cte;` with the caret inside the parentheses |
 | `bt` | `BEGIN TRANSACTION;`, an empty line for the caret, then commented `COMMIT` and `ROLLBACK` |
+| `ij` | `INNER JOIN ` (the table list opens) |
+| `lj` | `LEFT JOIN ` (the table list opens) |
+| `ob` | `ORDER BY ` |
+| `gb` | `GROUP BY ` |
+| `ifs` | `IF`, the caret for the condition, then `BEGIN`, an empty line and `END` |
+| `cp` | `CREATE PROCEDURE dbo.` with the caret for the name, a commented parameter line, `AS`, `BEGIN`, `SET NOCOUNT ON;`, an empty line, `END;` and `GO` |
 
 ```sql
 -- df + Tab                -- upd + Tab

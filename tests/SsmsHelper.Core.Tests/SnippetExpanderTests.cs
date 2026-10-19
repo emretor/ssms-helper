@@ -34,6 +34,19 @@ public class SnippetExpanderTests
         Assert.Equal("    SELECT TOP (100) * FROM | ORDER BY 1 DESC;", Expand("    stl|"));
     }
 
+    [Theory]
+    [InlineData("ij|", "INNER JOIN |")]
+    [InlineData("lj|", "LEFT JOIN |")]
+    [InlineData("ob|", "ORDER BY |")]
+    [InlineData("gb|", "GROUP BY |")]
+    [InlineData("ifs|", "IF |\nBEGIN\n\nEND")]
+    [InlineData("cp|", "CREATE PROCEDURE dbo.|\n    -- @Parameter int = NULL\nAS\nBEGIN\n    SET NOCOUNT ON;\n\nEND;\nGO")]
+    [InlineData("    ifs|", "    IF |\n    BEGIN\n\n    END")]   // keeps the line's indentation
+    public void Fragments(string marked, string expected)
+    {
+        Assert.Equal(expected, Expand(marked));
+    }
+
     [Fact]
     public void Shortcut_IsCaseInsensitive()
     {

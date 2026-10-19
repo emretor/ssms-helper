@@ -49,5 +49,13 @@ public sealed class SnippetCatalog
         new Snippet("df", "DELETE FROM\n    $CURSOR$\nWHERE", "DELETE FROM ... WHERE"),
         new Snippet("cte", "WITH cte AS\n(\n    $CURSOR$\n)\nSELECT * FROM cte;", "Common table expression"),
         new Snippet("bt", "BEGIN TRANSACTION;\n\n$CURSOR$\n\n-- COMMIT TRANSACTION;\n-- ROLLBACK TRANSACTION;", "Transaction with commented COMMIT/ROLLBACK"),
+
+        // Fragments (SSM-56). JOIN fragments leave the caret where the table list opens.
+        new Snippet("ij", "INNER JOIN $CURSOR$", "INNER JOIN"),
+        new Snippet("lj", "LEFT JOIN $CURSOR$", "LEFT JOIN"),
+        new Snippet("ob", "ORDER BY $CURSOR$", "ORDER BY"),
+        new Snippet("gb", "GROUP BY $CURSOR$", "GROUP BY"),
+        new Snippet("ifs", "IF $CURSOR$\nBEGIN\n\nEND", "IF ... BEGIN ... END"),
+        new Snippet("cp", "CREATE PROCEDURE dbo.$CURSOR$\n    -- @Parameter int = NULL\nAS\nBEGIN\n    SET NOCOUNT ON;\n\nEND;\nGO", "Create stored procedure"),
     });
 }

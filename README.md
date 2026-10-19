@@ -2,7 +2,7 @@
 
 Productivity helpers for SQL Server Management Studio 22, in the spirit of Redgate SQL Prompt:
 
-- **Snippets**: `ssf` + Tab becomes `SELECT * FROM `, plus `st100`, `stl`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`.
+- **Snippets**: `ssf` + Tab becomes `SELECT * FROM `, plus `st100`, `stl`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`, `ij`, `lj`, `ob`, `gb`, `ifs`, `cp`.
 - **JOIN helper**: after `JOIN dbo.Orders o ` or `... ON `, a list of `ON` conditions from foreign keys.
 - **INSERT helper**: `INSERT INTO dbo.Orders` + Tab writes the column list and typed `VALUES`; Shift+Enter writes
   the compact form.
