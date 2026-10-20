@@ -17,4 +17,5 @@ internal static class PackageIds
     public const int SurroundTransactionCommandId = 0x0104;
     public const int CopyAsInsertCommandId = 0x0105;
     public const int CopyAsInsertWithoutIdentityCommandId = 0x0106;
+    public const int UninstallCommandId = 0x0107;
 }

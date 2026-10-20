@@ -255,6 +255,13 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   the text view). The last focused SQL view is only a fallback (SSM-59). Selection or whole buffer. Any exception is
   logged and execution goes ahead.
 
+## Uninstall notes (SSM-63)
+
+- `Commands/UninstallCommand` runs `VSIXInstaller.exe` from SSMS's own `Common7\IDE` (next to the running
+  SSMS.exe) with `/uninstall:<InstallLocation.ExtensionId> /instanceIds:<id>`. The instance ID comes from our
+  assembly path (`...\SSMS\22.0_<id>\Extensions\...`, Core `InstallLocation.InstanceId`). `ExtensionId` must match
+  the manifest Identity (a test reads the manifest). No setting: it only runs when invoked.
+
 ## Options notes
 
 - `Core/Settings/HelperSettings`: immutable record, string values in and out (`ToValues`/`FromValues`), bad or

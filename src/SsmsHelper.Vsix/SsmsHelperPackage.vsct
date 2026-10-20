@@ -77,6 +77,13 @@
           <ButtonText>SSMS Helper: About</ButtonText>
         </Strings>
       </Button>
+
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidUninstall" priority="0x0110" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>SSMS Helper: Uninstall...</ButtonText>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -96,6 +103,7 @@
       <IDSymbol name="cmdidSurroundTransaction" value="0x0104" />
       <IDSymbol name="cmdidCopyAsInsert" value="0x0105" />
       <IDSymbol name="cmdidCopyAsInsertWithoutIdentity" value="0x0106" />
+      <IDSymbol name="cmdidUninstall" value="0x0107" />
       <IDSymbol name="ResultsGridMenuGroup" value="0x1030" />
     </GuidSymbol>
     <GuidSymbol name="guidSqlEditorGroup" value="{33F13AC3-80BB-4ecb-85BC-225435603A5E}">

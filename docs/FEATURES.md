@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.11, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.14, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -510,6 +510,7 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 | SSMS Helper: Surround with Transaction | Ctrl+K, Ctrl+T: wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK |
 | SSMS Helper: Refresh Schema | Reloads the current database's schema |
 | SSMS Helper: About | Shows the extension version, the SSMS version and the .NET runtime |
+| SSMS Helper: Uninstall... | Asks to confirm, then the extension installer removes SSMS Helper from this SSMS once you close it (other SSMS versions keep theirs) |
 
 On the **results grid's right-click menu**: Copy as INSERT and Copy as INSERT (without identity) (keyboard
 names `Tools.SSMSHelperCopyAsInsert`, `Tools.SSMSHelperCopyAsInsertWithoutIdentity`).

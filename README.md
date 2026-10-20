@@ -95,5 +95,8 @@ The extension is installed per user under
 
 ## Uninstall
 
-Close SSMS, delete the extension's folder from the path above, and create (or touch) an empty file
-named `extensions.configurationchanged` in the `Extensions` folder so SSMS rebuilds its cache.
+In SSMS, choose **Tools > SSMS Helper: Uninstall...** and confirm. The Visual Studio extension installer opens,
+asks you to close SSMS, and removes the extension from that SSMS only (repeat in the other SSMS version if both
+have it). Before 0.13.13, or if that fails: close SSMS, delete the extension's folder from the path above, and
+create (or touch) an empty file named `extensions.configurationchanged` in the `Extensions` folder so SSMS
+rebuilds its cache.
