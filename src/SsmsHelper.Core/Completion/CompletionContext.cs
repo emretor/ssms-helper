@@ -289,28 +289,84 @@ public static class CompletionContextAnalyzer
     /// <summary>
     /// End of the text a pick replaces: the rest of the name right of the caret, so "WHERE |a" + AddressId gives
     /// "AddressId", not "AddressIda". Stops at a dot, whitespace or any other punctuation; inside [brackets], after
-    /// the closing bracket.
+    /// the closing bracket. With <paramref name="wholeName"/> (lists of qualified names: tables, procedures) it goes on
+    /// over the following parts, so "JOIN |dbo.Orders" + dbo.Orders replaces all of "dbo.Orders" (SSM-64).
     /// </summary>
-    public static int ReplaceEnd(string text, int caret)
+    public static int ReplaceEnd(string text, int caret, bool wholeName = false)
     {
         var state = caret > 0 && caret <= text.Length ? SqlLexicalContext.GetState(text, caret) : SqlLexicalState.Code;
-        var i = caret;
+        int i;
         if (state == SqlLexicalState.BracketIdentifier)
         {
-            while (i < text.Length && text[i] != ']' && text[i] != '\n' && text[i] != '\r')
+            i = BracketEnd(text, caret);
+            if (i == caret)
             {
-                i++;
+                return caret; // unclosed bracket
             }
-
-            return i < text.Length && text[i] == ']' ? i + 1 : caret;
+        }
+        else
+        {
+            i = wholeName ? PartEnd(text, caret) : WordEnd(text, caret);
         }
 
+        if (!wholeName)
+        {
+            return i;
+        }
+
+        // ".part", "..part" (database..table) and a trailing dot.
+        while (i < text.Length && text[i] == '.')
+        {
+            i++;
+            i = PartEnd(text, i);
+        }
+
+        return i;
+    }
+
+    // A plain name part or a [bracketed] one starting at i; i itself when there is none.
+    private static int PartEnd(string text, int i)
+    {
+        if (i >= text.Length || text[i] != '[')
+        {
+            return WordEnd(text, i);
+        }
+
+        var end = BracketEnd(text, i + 1);
+        return end == i + 1 ? i : end; // unclosed: not a name part
+    }
+
+    private static int WordEnd(string text, int i)
+    {
         while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] is '_' or '$' or '#' or '@'))
         {
             i++;
         }
 
         return i;
+    }
+
+    // From inside a [bracketed] name: after its closing bracket ("]]" is an escaped bracket), or i when unclosed on the line.
+    private static int BracketEnd(string text, int i)
+    {
+        var start = i;
+        while (i < text.Length && text[i] != '\n' && text[i] != '\r')
+        {
+            if (text[i] == ']')
+            {
+                if (i + 1 < text.Length && text[i + 1] == ']')
+                {
+                    i += 2;
+                    continue;
+                }
+
+                return i + 1;
+            }
+
+            i++;
+        }
+
+        return start;
     }
 
     /// <summary>"SELECT *", "SELECT DISTINCT *", "SELECT TOP (10) *".</summary>

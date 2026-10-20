@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.10, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.11, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -48,7 +48,11 @@ type). It opens **right after the space**, without Ctrl+J:
 - **The best match is always selected**: Enter or Tab inserts it, no arrow keys needed. Arrows move the selection,
   Esc closes the list. While the list is open, Enter picks; press Enter again for a new line.
 - **A pick replaces the whole name at the caret**: with the caret just left of `a` in `WHERE a`, Ctrl+Space and
-  `AddressId` gives `WHERE AddressId`, not `WHERE AddressIda`.
+  `AddressId` gives `WHERE AddressId`, not `WHERE AddressIda`. Table and procedure lists replace the whole
+  qualified name: with the caret left of `dbo` in `JOIN dbo.Orders o`, picking `dbo.Customers` gives
+  `JOIN dbo.Customers o` (also `[dbo].[Orders]`, `Shop.dbo.Orders`, `Shop..Orders`).
+- **Only the text left of the caret filters**: with the caret at the start of a name the list shows everything;
+  in `dbo.Or|ders` it filters by `dbo.Or`.
 - **The list closes** as soon as nothing matches what you typed.
 - **In a WHERE clause** columns are inserted with the table's alias (`o.OrderId`). With several tables and no
   alias, the table name is used (`Orders.OrderId`); one table without an alias gives just `OrderId`. After

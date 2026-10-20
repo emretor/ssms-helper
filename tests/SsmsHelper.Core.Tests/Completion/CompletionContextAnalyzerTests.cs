@@ -157,6 +157,37 @@ public class CompletionContextAnalyzerTests
     }
 
     [Theory]
+    [InlineData("JOIN |dbo.Orders o ON o.Id = c.Id", "dbo.Orders")]                // SSM-64: gave dbo.Orders.Orders
+    [InlineData("JOIN dbo|.Orders o", ".Orders")]
+    [InlineData("JOIN dbo.|Orders o", "Orders")]
+    [InlineData("JOIN |[dbo].[Order Lines] l", "[dbo].[Order Lines]")]
+    [InlineData("JOIN [db|o].[Order Lines] l", "o].[Order Lines]")]
+    [InlineData("JOIN |dbo.[A]]B] x", "dbo.[A]]B]")]
+    [InlineData("FROM |Shop..Orders o", "Shop..Orders")]
+    [InlineData("FROM |Shop.dbo.Orders", "Shop.dbo.Orders")]
+    [InlineData("FROM |dbo. x", "dbo.")]
+    [InlineData("FROM |Orders\nWHERE", "Orders")]
+    [InlineData("FROM |dbo.Orders,dbo.Lines", "dbo.Orders")]
+    [InlineData("EXEC |dbo.GetOrders @id = 1", "dbo.GetOrders")]
+    [InlineData("FROM | dbo.Orders", "")]
+    [InlineData("FROM |[dbo.Orders", "")]                                          // unclosed bracket
+    public void ReplaceEnd_WholeName_CoversTheWholeQualifiedName(string textWithCaret, string rest)
+    {
+        var caret = textWithCaret.IndexOf('|');
+        var text = textWithCaret.Remove(caret, 1);
+        Assert.Equal(rest, text.Substring(caret, CompletionContextAnalyzer.ReplaceEnd(text, caret, wholeName: true) - caret));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Customers c\njoin |dbo.Orders o ON o.CustomerId = c.CustomerId", CompletionKind.Objects)]
+    [InlineData("SELECT * FROM dbo.Customers c\njoin dbo.|Orders o ON o.CustomerId = c.CustomerId", CompletionKind.Objects)]
+    [InlineData("EXEC |dbo.GetOrders", CompletionKind.Procedures)]
+    public void CaretBeforeAnExistingName_IsAnObjectOrProcedureList(string text, CompletionKind kind)
+    {
+        Assert.Equal(kind, Analyze(text)!.Kind);
+    }
+
+    [Theory]
     [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders o |", 48, "ON ")]
     [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders AS o |", 51, "ON ")]
     [InlineData("SELECT * FROM dbo.Customers c JOIN dbo.Orders |", 46, "ON ")]       // the source decides about bare tables

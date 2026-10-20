@@ -158,7 +158,8 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
         _key = key;
 
         // The span covers the whole name around the caret: what is typed filters, and a pick replaces all of it.
-        var replaceEnd = start + CompletionContextAnalyzer.ReplaceEnd(window, triggerLocation.Position - start);
+        var replaceEnd = start + CompletionContextAnalyzer.ReplaceEnd(window, triggerLocation.Position - start,
+            wholeName: context.Kind is CompletionKind.Objects or CompletionKind.Procedures);
         return new CompletionStartData(CompletionParticipation.ProvidesItems,
             new SnapshotSpan(triggerLocation.Snapshot, Span.FromBounds(context.ReplaceStart, replaceEnd)));
     }

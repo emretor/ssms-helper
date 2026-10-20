@@ -182,6 +182,9 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   (ConditionalWeakTable); columns built per session. `SqlCompletionItemManager`: always hard-selects the best match,
   dismisses when nothing matches.
 - Typed spaces trigger the list natively; snippets call `IntelliSenseSessions.OpenCompletion` after expanding.
+- The applicable span runs from `ReplaceStart` to `ReplaceEnd`. For Objects/Procedures `ReplaceEnd(wholeName: true)`
+  goes over every following `.part` / `[part]`, so a pick replaces the whole qualified name (SSM-64:
+  "JOIN |dbo.Orders" gave dbo.Orders.Orders). `SqlCompletionItemManager` filters by the span up to the caret only.
 - Never participate with the schema still loading: a session waiting on the first load was dropped by the editor
   (user saw no list on the first space). `OpenWhenLoaded` waits in the background and opens the list only if the
   caret has not moved, and sets the status bar to "schema ... loaded".

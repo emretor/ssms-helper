@@ -68,7 +68,7 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
             }
         }
 
-        var typed = session.ApplicableToSpan.GetText(data.Snapshot);
+        var typed = Typed(session, data.Snapshot);
         if (EndsWord(typed))
         {
             // "SELECT * from" + space with the keyword list open: the space ends that list. The editor does not start
@@ -110,6 +110,23 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
         // Always a hard selection on the best match, so Enter / Tab pick it without arrow keys (as SQL Prompt does).
         return Task.FromResult<FilteredCompletionModel?>(new FilteredCompletionModel(
             shown.MoveToImmutable(), 0, ImmutableArray<CompletionFilterWithState>.Empty, UpdateSelectionHint.Selected, centerSelection: true, uniqueItem: null));
+    }
+
+    /// <summary>
+    /// The filter text: the span up to the caret. A pick replaces the whole name around the caret (SSM-64), but only
+    /// what is left of it filters, so "JOIN |dbo.Orders" lists every table and "dbo.Or|ders" filters by "dbo.Or".
+    /// </summary>
+    private static string Typed(IAsyncCompletionSession session, ITextSnapshot snapshot)
+    {
+        var span = session.ApplicableToSpan.GetSpan(snapshot);
+        var caret = session.TextView.Caret.Position.BufferPosition;
+        if (caret.Snapshot.TextBuffer != snapshot.TextBuffer)
+        {
+            return span.GetText();
+        }
+
+        var position = caret.TranslateTo(snapshot, PointTrackingMode.Positive).Position;
+        return position <= span.Start ? string.Empty : snapshot.GetText(Span.FromBounds(span.Start, System.Math.Min(position, span.End)));
     }
 
     /// <summary>Whitespace typed after the name, outside [brackets] ("[Order Notes" keeps filtering).</summary>
