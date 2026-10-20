@@ -61,6 +61,26 @@ public class SchemaLoaderTests
     }
 
     [Fact]
+    public async Task NullTypeName_FallsBackToTheBaseType_InsteadOfFailingTheLoad()
+    {
+        // TYPE_NAME is NULL for a user-defined type the login may not see (SSM-61).
+        var schema = await new SampleSchema()
+            .Object(1, "dbo", "T")
+            .Column(1, 1, "Id")
+            .Column(1, 2, "Code", type: null, baseType: "nvarchar", maxLength: 20)
+            .Column(1, 3, "Shape", type: null, baseType: null)
+            .Procedure(10, "dbo", "P")
+            .Parameter(10, 1, "@code", type: null, baseType: "varchar", maxLength: 10)
+            .LoadAsync();
+
+        var columns = schema.GetTable(new TableName("dbo", "T"))!.Columns;
+        Assert.Equal(("nvarchar", "nvarchar"), (columns[1].TypeName, columns[1].BaseTypeName));
+        Assert.Equal((string.Empty, string.Empty), (columns[2].TypeName, columns[2].BaseTypeName));
+        var parameter = Assert.Single(Assert.Single(schema.Procedures).Parameters);
+        Assert.Equal(("varchar", "varchar"), (parameter.TypeName, parameter.BaseTypeName));
+    }
+
+    [Fact]
     public async Task Throws_WhenResultSetsAreMissing()
     {
         var sample = SampleSchema.Shop();

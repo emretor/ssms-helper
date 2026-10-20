@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.9, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.10, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -469,6 +469,8 @@ This changes every row. Run anyway?
 - The database list after `USE ` is loaded per server, with one small query, the first time you type `USE `, and kept
   as long as the schema. Ctrl+Shift+R reloads it too (for example after creating a database).
 - Schema changes are not detected automatically (SSM-52, postponed): after changing the schema, press Ctrl+Shift+R.
+- A column or parameter of a user-defined type you have no permission on shows its base type (for example
+  `nvarchar(20)` instead of `dbo.Code`); before 0.13.10 such a column made the whole load fail.
 - When loading fails (wrong password, disabled login, server down), the helpers wait 30 seconds before trying that
   database again, so typing does not open a connection per key (or lock out the login). Until then they repeat the
   last error, and a schema loaded earlier keeps working. Ctrl+Shift+R or Refresh Schema tries again at once.

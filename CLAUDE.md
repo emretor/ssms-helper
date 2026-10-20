@@ -128,6 +128,8 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   Schema) retry at once (SSM-60: a wrong password used to open a connection per keystroke).
 - `SchemaLoader.Query` must stay compatible with SQL Server 2012+ and Azure SQL. Avoid newer catalog columns
   directly; use `COLUMNPROPERTY` or similar functions that return NULL on older versions.
+- Read every nullable query column as nullable: `TYPE_NAME` is NULL for a user-defined type the login cannot see
+  (SSM-61; it failed the whole load). Type names fall back to the base type, then to empty.
 
 ## JOIN helper notes
 

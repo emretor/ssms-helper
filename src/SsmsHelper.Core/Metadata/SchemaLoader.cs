@@ -107,8 +107,8 @@ WHERE o.type IN ('IF', 'TF', 'FT') AND o.is_ms_shipped = 0;";
             var column = new ColumnInfo(
                 Name: GetString(reader, "ColumnName"),
                 Ordinal: GetInt(reader, "Ordinal"),
-                TypeName: GetString(reader, "TypeName"),
-                BaseTypeName: GetString(reader, "BaseTypeName"),
+                TypeName: TypeName(reader),
+                BaseTypeName: BaseTypeName(reader),
                 MaxLength: Convert.ToInt16(reader["MaxLength"]),
                 Precision: Convert.ToByte(reader["Precision"]),
                 Scale: Convert.ToByte(reader["Scale"]),
@@ -186,8 +186,8 @@ WHERE o.type IN ('IF', 'TF', 'FT') AND o.is_ms_shipped = 0;";
                     procedure.Parameters.Add(new ParameterInfo(
                         Name: parameterName,
                         Ordinal: GetInt(reader, "Ordinal"),
-                        TypeName: GetString(reader, "TypeName"),
-                        BaseTypeName: GetString(reader, "BaseTypeName"),
+                        TypeName: TypeName(reader),
+                        BaseTypeName: BaseTypeName(reader),
                         MaxLength: Convert.ToInt16(reader["MaxLength"]),
                         Precision: Convert.ToByte(reader["Precision"]),
                         Scale: Convert.ToByte(reader["Scale"]),
@@ -231,6 +231,12 @@ WHERE o.type IN ('IF', 'TF', 'FT') AND o.is_ms_shipped = 0;";
     }
 
     private static string GetString(DbDataReader reader, string name) => (string)reader[name];
+
+    // TYPE_NAME returns NULL for a user-defined type the login has no permission on (SSM-61). One such column must
+    // not fail the whole load: fall back to the base type, as declared types go, or to an empty name.
+    private static string TypeName(DbDataReader reader) => reader["TypeName"] as string ?? BaseTypeName(reader);
+
+    private static string BaseTypeName(DbDataReader reader) => reader["BaseTypeName"] as string ?? string.Empty;
 
     private static int GetInt(DbDataReader reader, string name) => Convert.ToInt32(reader[name]);
 

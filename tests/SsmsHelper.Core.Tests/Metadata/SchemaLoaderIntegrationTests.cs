@@ -65,7 +65,11 @@ CREATE FUNCTION dbo.OrdersOf (@CustomerId int) RETURNS TABLE AS RETURN SELECT Or
 GO
 CREATE FUNCTION sales.Totals () RETURNS @t TABLE (Total int) AS BEGIN INSERT @t VALUES (1); RETURN; END;
 GO
-CREATE FUNCTION dbo.Twice (@x int) RETURNS int AS BEGIN RETURN @x * 2; END;";
+CREATE FUNCTION dbo.Twice (@x int) RETURNS int AS BEGIN RETURN @x * 2; END;
+GO
+CREATE USER RestrictedReader WITHOUT LOGIN;
+GRANT SELECT ON dbo.Orders TO RestrictedReader;
+GRANT EXECUTE ON dbo.GetOrders TO RestrictedReader;";
 
     public async ValueTask InitializeAsync()
     {
@@ -170,6 +174,27 @@ CREATE FUNCTION dbo.Twice (@x int) RETURNS int AS BEGIN RETURN @x * 2; END;";
 
         // Inline and multi-statement table-valued functions; not the scalar one.
         Assert.Equal(new[] { "dbo.OrdersOf", "sales.Totals" }, schema.TableFunctions.Select(f => f.ToString()).OrderBy(n => n, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task LoadsForAUserWithoutPermissionOnAnAliasType()
+    {
+        Assert.SkipWhen(ServerConnectionString is null, $"Set {EnvironmentVariable} to run SQL Server integration tests.");
+
+        // RestrictedReader sees dbo.Orders and dbo.GetOrders but not the type dbo.Money19: TYPE_NAME returns NULL (SSM-61).
+        await using var connection = new SqlConnection(DatabaseConnectionString());
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using (var impersonate = new SqlCommand("EXECUTE AS USER = 'RestrictedReader';", connection))
+        {
+            await impersonate.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
+        var schema = await SchemaLoader.LoadAsync(connection, DateTimeOffset.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
+
+        var total = schema.GetTable(new TableName("dbo", "Orders"))!.Columns.Single(c => c.Name == "Total");
+        Assert.Equal(("decimal", "decimal"), (total.TypeName, total.BaseTypeName));
+        var parameter = schema.FindProcedure(null, "GetOrders")!.Parameters.Single(p => p.Name == "@Total");
+        Assert.Equal(("decimal", "decimal"), (parameter.TypeName, parameter.BaseTypeName));
     }
 
     private string DatabaseConnectionString() =>

@@ -26,17 +26,17 @@ internal sealed class SampleSchema
     }
 
     public SampleSchema Column(
-        int objectId, int ordinal, string name, string type = "int", bool nullable = false, bool identity = false,
+        int objectId, int ordinal, string name, string? type = "int", bool nullable = false, bool identity = false,
         bool computed = false, byte generatedAlways = 0, string? defaultDefinition = null, string? baseType = null,
         short maxLength = 4, byte precision = 10, byte scale = 0)
     {
-        Columns.Rows.Add(objectId, ordinal, name, type, baseType ?? type, maxLength, precision, scale,
+        Columns.Rows.Add(objectId, ordinal, name, (object?)type ?? DBNull.Value, (object?)(baseType ?? type) ?? DBNull.Value, maxLength, precision, scale,
             nullable, identity, computed, generatedAlways, (object?)defaultDefinition ?? DBNull.Value);
         return this;
     }
 
     private readonly List<(int Id, string Schema, string Name)> _procedures = new();
-    private readonly List<(int ProcedureId, int Ordinal, string Name, string Type, string BaseType, short MaxLength, byte Precision, byte Scale, bool Output)> _parameters = new();
+    private readonly List<(int ProcedureId, int Ordinal, string Name, string? Type, string? BaseType, short MaxLength, byte Precision, byte Scale, bool Output)> _parameters = new();
 
     public DataTable TableFunctions { get; } = Table("SchemaName:string", "ObjectName:string");
 
@@ -53,7 +53,7 @@ internal sealed class SampleSchema
     }
 
     public SampleSchema Parameter(
-        int procedureId, int ordinal, string name, string type = "int", short maxLength = 4, byte precision = 10, byte scale = 0,
+        int procedureId, int ordinal, string name, string? type = "int", short maxLength = 4, byte precision = 10, byte scale = 0,
         bool output = false, string? baseType = null)
     {
         _parameters.Add((procedureId, ordinal, name, type, baseType ?? type, maxLength, precision, scale, output));
@@ -76,7 +76,7 @@ internal sealed class SampleSchema
 
             foreach (var p in parameters)
             {
-                table.Rows.Add(id, schema, name, p.Name, p.Ordinal, p.Type, p.BaseType, p.MaxLength, p.Precision, p.Scale, p.Output);
+                table.Rows.Add(id, schema, name, p.Name, p.Ordinal, (object?)p.Type ?? DBNull.Value, (object?)p.BaseType ?? DBNull.Value, p.MaxLength, p.Precision, p.Scale, p.Output);
             }
         }
 
