@@ -15,7 +15,7 @@ namespace SsmsHelper.Editor;
 /// <summary>
 /// Shows foreign-key based join conditions for one SQL editor. Opens automatically when the user
 /// types a space after "JOIN table alias" (the suggestion then includes "ON ") or after "JOIN table [alias] ON",
-/// or on demand through Tools > SSMS Helper: Suggest Join. With the completion list on, the conditions are in that
+/// or on demand through Tools > SSMS Helper > Suggest Join. With the completion list on, the conditions are in that
 /// list instead (SqlCompletionSource, SSM-40) and this popup is not used: SSMS's own list could open on top of it.
 /// </summary>
 internal sealed class JoinSuggestionController

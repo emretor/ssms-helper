@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.14, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.15, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -114,7 +114,7 @@ of the line and type the space yourself, and the column list opens.
 
 ### Surround with Transaction
 
-Select statements (or put the caret on a one-line statement) and run **Tools > SSMS Helper: Surround with
+Select statements (or put the caret on a one-line statement) and run **Tools > SSMS Helper > Surround with
 Transaction**, or press **Ctrl+K, Ctrl+T**. Rebind it under Tools > Options > Environment > Keyboard, command
 `Tools.SSMSHelperSurroundWithTransaction`.
 
@@ -144,7 +144,7 @@ The list opens by itself when you type a space:
 - after `ON`: `SELECT * FROM dbo.Customers c JOIN dbo.Orders o ON `
 
 It does not open after a table without an alias (`JOIN dbo.Orders `), because you are probably about to type one.
-Use **Tools > SSMS Helper: Suggest Join** to open it anywhere after `JOIN table` or `ON`.
+Use **Tools > SSMS Helper > Suggest Join** to open it anywhere after `JOIN table` or `ON`.
 
 With the [completion list](#completion-list) on (the default), the conditions are the top of that list, and
 the columns of every table in the query so far follow them, the joined table first, then the nearest earlier
@@ -386,7 +386,7 @@ Nothing is executed; edit and run the script yourself. Details:
   the window's own database; for another database the status bar asks you to switch first.
 - Encrypted modules, or no `VIEW DEFINITION` permission: the status bar says it cannot be scripted.
 - Synonyms, sequences, table types, temp tables and names with a linked server are not scripted.
-- Also on the Tools menu as **SSMS Helper: Script Object** (keyboard name `Tools.SSMSHelperScriptObject`); rebind
+- Also on the menu as **Tools > SSMS Helper > Script Object** (keyboard name `Tools.SSMSHelperScriptObject`); rebind
   it under Tools > Options > Environment > Keyboard. Turn it off under [Options](#options).
 - Cost: one small query per F12, plus SMO for tables (about half a second the first time, then faster). Nothing
   runs while you type.
@@ -469,7 +469,7 @@ This changes every row. Run anyway?
   reloads the SSMS Helper schema of the window's database, for example after creating a table or a column. The
   helpers keep using the old schema until the new one has loaded (`schema for <server>/<db> loaded.`). Turn it off
   under [Options](#options).
-- **Tools > SSMS Helper: Refresh Schema** reloads only the SSMS Helper schema and reports the counts.
+- **Tools > SSMS Helper > Refresh Schema** reloads only the SSMS Helper schema and reports the counts.
 - The database list after `USE ` is loaded per server, with one small query, the first time you type `USE `, and kept
   as long as the schema. Ctrl+Shift+R reloads it too (for example after creating a database).
 - Schema changes are not detected automatically (SSM-52, postponed): after changing the schema, press Ctrl+Shift+R.
@@ -483,7 +483,7 @@ This changes every row. Run anyway?
 
 ## Options
 
-**Tools > Options > SSMS Helper > General.** Changes apply at once, also in open query windows.
+**Tools > Options > SSMS Helper > General** (or **Tools > SSMS Helper > Options...**). Changes apply at once, also in open query windows.
 
 | Setting | Default | What it switches |
 |---|---|---|
@@ -503,14 +503,17 @@ A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter sta
 
 ## Menu commands and shortcuts
 
-| Command (Tools menu) | What it does |
-|---|---|
-| SSMS Helper: Suggest Join | Opens the JOIN list at the caret (keyboard name `Tools.SSMSHelperSuggestJoin`) |
-| SSMS Helper: Script Object | F12: ALTER / CREATE script of the object under the caret in a new window |
-| SSMS Helper: Surround with Transaction | Ctrl+K, Ctrl+T: wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK |
-| SSMS Helper: Refresh Schema | Reloads the current database's schema |
-| SSMS Helper: About | Shows the extension version, the SSMS version and the .NET runtime |
-| SSMS Helper: Uninstall... | Asks to confirm, then the extension installer removes SSMS Helper from this SSMS once you close it (other SSMS versions keep theirs) |
+All commands are in the **Tools > SSMS Helper** submenu.
+
+| Command | Keyboard name | What it does |
+|---|---|---|
+| Suggest Join | `Tools.SSMSHelperSuggestJoin` | Opens the JOIN list at the caret |
+| Script Object | `Tools.SSMSHelperScriptObject` | F12: ALTER / CREATE script of the object under the caret in a new window |
+| Surround with Transaction | `Tools.SSMSHelperSurroundWithTransaction` | Ctrl+K, Ctrl+T: wraps the selected lines in BEGIN TRANSACTION ... ROLLBACK |
+| Refresh Schema | `Tools.SSMSHelperRefreshSchema` | Reloads the current database's schema |
+| Options... | `Tools.SSMSHelperOptions` | Opens Tools > Options > SSMS Helper |
+| About | `Tools.SSMSHelperAbout` | Shows the extension version, the SSMS version and the .NET runtime |
+| Uninstall... | `Tools.SSMSHelperUninstall` | Asks to confirm, then the extension installer removes SSMS Helper from this SSMS once you close it (other SSMS versions keep theirs) |
 
 On the **results grid's right-click menu**: Copy as INSERT and Copy as INSERT (without identity) (keyboard
 names `Tools.SSMSHelperCopyAsInsert`, `Tools.SSMSHelperCopyAsInsertWithoutIdentity`).

@@ -9,7 +9,7 @@ using Task = System.Threading.Tasks.Task;
 namespace SsmsHelper.Commands;
 
 /// <summary>
-/// Tools > SSMS Helper: About. Proves the package loads inside SSMS and that the
+/// Tools > SSMS Helper > About. Proves the package loads inside SSMS and that the
 /// netstandard2.0 Core assembly resolves in the host process.
 /// </summary>
 internal static class AboutCommand

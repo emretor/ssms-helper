@@ -9,7 +9,7 @@ using Task = System.Threading.Tasks.Task;
 namespace SsmsHelper.Commands;
 
 /// <summary>
-/// Tools > SSMS Helper: Suggest Join. Opens join suggestions at the caret of the active editor.
+/// Tools > SSMS Helper > Suggest Join. Opens join suggestions at the caret of the active editor.
 /// Bind a shortcut under Tools > Options > Environment > Keyboard (command Tools.SSMSHelperSuggestJoin).
 /// </summary>
 internal static class SuggestJoinCommand

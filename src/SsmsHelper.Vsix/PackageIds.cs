@@ -18,4 +18,5 @@ internal static class PackageIds
     public const int CopyAsInsertCommandId = 0x0105;
     public const int CopyAsInsertWithoutIdentityCommandId = 0x0106;
     public const int UninstallCommandId = 0x0107;
+    public const int OptionsCommandId = 0x0108;
 }

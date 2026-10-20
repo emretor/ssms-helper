@@ -10,7 +10,7 @@ using Task = System.Threading.Tasks.Task;
 namespace SsmsHelper.Commands;
 
 /// <summary>
-/// Tools > SSMS Helper: Uninstall (SSM-63). Starts SSMS's own VSIXInstaller with /uninstall for this SSMS instance
+/// Tools > SSMS Helper > Uninstall (SSM-63). Starts SSMS's own VSIXInstaller with /uninstall for this SSMS instance
 /// only; the installer waits for SSMS to close and then removes the extension.
 /// </summary>
 internal static class UninstallCommand

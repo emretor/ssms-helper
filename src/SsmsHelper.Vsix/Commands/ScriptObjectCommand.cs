@@ -10,7 +10,7 @@ using Task = System.Threading.Tasks.Task;
 namespace SsmsHelper.Commands;
 
 /// <summary>
-/// Tools > SSMS Helper: Script Object (F12 by default, keyboard name Tools.SSMSHelperScriptObject). Opens the object
+/// Tools > SSMS Helper > Script Object (F12 by default, keyboard name Tools.SSMSHelperScriptObject). Opens the object
 /// under the caret of the focused query window as ALTER (modules) or CREATE (tables) in a new query window.
 /// </summary>
 internal static class ScriptObjectCommand

@@ -88,14 +88,14 @@ that relies on SSMS internals may not work there.
    Studio 2026 does for 2022), whatever the package's version range says. **Untick SSMS 22** there; the SSMS 21
    build cannot load in SSMS 22. `SsmsHelper.vsix` is offered for SSMS 22 only. Installing `SsmsHelper.vsix` first
    avoids this: SSMS 22 then already has that version and is left out of the SSMS 21 package's list.
-3. Start SSMS and open **Tools > SSMS Helper: About**.
+3. Start SSMS and open **Tools > SSMS Helper > About**.
 
 The extension is installed per user under
 `%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>` (`21.0_<id>` for SSMS 21).
 
 ## Uninstall
 
-In SSMS, choose **Tools > SSMS Helper: Uninstall...** and confirm. The Visual Studio extension installer opens,
+In SSMS, choose **Tools > SSMS Helper > Uninstall...** and confirm. The Visual Studio extension installer opens,
 asks you to close SSMS, and removes the extension from that SSMS only (repeat in the other SSMS version if both
 have it). Before 0.13.13, or if that fails: close SSMS, delete the extension's folder from the path above, and
 create (or touch) an empty file named `extensions.configurationchanged` in the `Extensions` folder so SSMS

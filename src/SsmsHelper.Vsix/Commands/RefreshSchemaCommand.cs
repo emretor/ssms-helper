@@ -11,7 +11,7 @@ using Task = System.Threading.Tasks.Task;
 namespace SsmsHelper.Commands;
 
 /// <summary>
-/// Tools > SSMS Helper: Refresh Schema. Reloads tables, columns and foreign keys for the active
+/// Tools > SSMS Helper > Refresh Schema. Reloads tables, columns and foreign keys for the active
 /// query window's database and reports the result in the status bar.
 /// </summary>
 internal static class RefreshSchemaCommand

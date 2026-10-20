@@ -255,6 +255,12 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   the text view). The last focused SQL view is only a fallback (SSM-59). Selection or whole buffer. Any exception is
   logged and execution goes ahead.
 
+## Menu notes (SSM-65)
+
+- Tools-menu commands live in the `Tools > SSMS Helper` submenu (vsct `SsmsHelperSubMenu`: `SubMenuCommandsGroup`,
+  then `SubMenuInfoGroup` for Options / About / Uninstall). Every command has a `CanonicalName` `.Tools.SSMSHelper<Name>`
+  so its keyboard name does not depend on the menu path; keep that for new commands.
+
 ## Uninstall notes (SSM-63)
 
 - `Commands/UninstallCommand` runs `VSIXInstaller.exe` from SSMS's own `Common7\IDE` (next to the running

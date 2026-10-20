@@ -4,9 +4,26 @@
   <Extern href="vsshlids.h" />
 
   <Commands package="guidSsmsHelperPackage">
+    <Menus>
+      <Menu guid="guidSsmsHelperCmdSet" id="SsmsHelperSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>SSMS Helper</ButtonText>
+        </Strings>
+      </Menu>
+    </Menus>
+
     <Groups>
       <Group guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+
+      <!-- Tools > SSMS Helper submenu (SSM-65): commands, then a separator and Options / About / Uninstall. -->
+      <Group guid="guidSsmsHelperCmdSet" id="SubMenuCommandsGroup" priority="0x0100">
+        <Parent guid="guidSsmsHelperCmdSet" id="SsmsHelperSubMenu" />
+      </Group>
+      <Group guid="guidSsmsHelperCmdSet" id="SubMenuInfoGroup" priority="0x0200">
+        <Parent guid="guidSsmsHelperCmdSet" id="SsmsHelperSubMenu" />
       </Group>
 
       <!-- The SQL results grid's right-click menu: SQLEditors.dll shows menu 112 (IDM_SQLWB_SQLRESGRID_CONTEXT)
@@ -18,27 +35,27 @@
 
     <Buttons>
       <Button guid="guidSsmsHelperCmdSet" id="cmdidSuggestJoin" priority="0x0080" type="Button">
-        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuCommandsGroup" />
         <Strings>
-          <ButtonText>SSMS Helper: Suggest Join</ButtonText>
+          <ButtonText>Suggest Join</ButtonText>
           <CanonicalName>.Tools.SSMSHelperSuggestJoin</CanonicalName>
           <LocCanonicalName>.Tools.SSMSHelperSuggestJoin</LocCanonicalName>
         </Strings>
       </Button>
 
       <Button guid="guidSsmsHelperCmdSet" id="cmdidScriptObject" priority="0x0085" type="Button">
-        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuCommandsGroup" />
         <Strings>
-          <ButtonText>SSMS Helper: Script Object</ButtonText>
+          <ButtonText>Script Object</ButtonText>
           <CanonicalName>.Tools.SSMSHelperScriptObject</CanonicalName>
           <LocCanonicalName>.Tools.SSMSHelperScriptObject</LocCanonicalName>
         </Strings>
       </Button>
 
       <Button guid="guidSsmsHelperCmdSet" id="cmdidSurroundTransaction" priority="0x0088" type="Button">
-        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuCommandsGroup" />
         <Strings>
-          <ButtonText>SSMS Helper: Surround with Transaction</ButtonText>
+          <ButtonText>Surround with Transaction</ButtonText>
           <CanonicalName>.Tools.SSMSHelperSurroundWithTransaction</CanonicalName>
           <LocCanonicalName>.Tools.SSMSHelperSurroundWithTransaction</LocCanonicalName>
         </Strings>
@@ -65,23 +82,38 @@
       </Button>
 
       <Button guid="guidSsmsHelperCmdSet" id="cmdidRefreshSchema" priority="0x0090" type="Button">
-        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuCommandsGroup" />
         <Strings>
-          <ButtonText>SSMS Helper: Refresh Schema</ButtonText>
+          <ButtonText>Refresh Schema</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperRefreshSchema</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperRefreshSchema</LocCanonicalName>
         </Strings>
       </Button>
 
       <Button guid="guidSsmsHelperCmdSet" id="cmdidAbout" priority="0x0100" type="Button">
-        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuInfoGroup" />
         <Strings>
-          <ButtonText>SSMS Helper: About</ButtonText>
+          <ButtonText>About</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperAbout</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperAbout</LocCanonicalName>
         </Strings>
       </Button>
 
       <Button guid="guidSsmsHelperCmdSet" id="cmdidUninstall" priority="0x0110" type="Button">
-        <Parent guid="guidSsmsHelperCmdSet" id="ToolsMenuGroup" />
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuInfoGroup" />
         <Strings>
-          <ButtonText>SSMS Helper: Uninstall...</ButtonText>
+          <ButtonText>Uninstall...</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperUninstall</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperUninstall</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidSsmsHelperCmdSet" id="cmdidOptions" priority="0x0010" type="Button">
+        <Parent guid="guidSsmsHelperCmdSet" id="SubMenuInfoGroup" />
+        <Strings>
+          <ButtonText>Options...</ButtonText>
+          <CanonicalName>.Tools.SSMSHelperOptions</CanonicalName>
+          <LocCanonicalName>.Tools.SSMSHelperOptions</LocCanonicalName>
         </Strings>
       </Button>
     </Buttons>
@@ -104,6 +136,10 @@
       <IDSymbol name="cmdidCopyAsInsert" value="0x0105" />
       <IDSymbol name="cmdidCopyAsInsertWithoutIdentity" value="0x0106" />
       <IDSymbol name="cmdidUninstall" value="0x0107" />
+      <IDSymbol name="cmdidOptions" value="0x0108" />
+      <IDSymbol name="SsmsHelperSubMenu" value="0x1040" />
+      <IDSymbol name="SubMenuCommandsGroup" value="0x1050" />
+      <IDSymbol name="SubMenuInfoGroup" value="0x1060" />
       <IDSymbol name="ResultsGridMenuGroup" value="0x1030" />
     </GuidSymbol>
     <GuidSymbol name="guidSqlEditorGroup" value="{33F13AC3-80BB-4ecb-85BC-225435603A5E}">
