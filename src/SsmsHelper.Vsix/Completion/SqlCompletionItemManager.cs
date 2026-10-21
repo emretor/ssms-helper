@@ -107,9 +107,12 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
                 : new CompletionItemWithHighlight(item, ImmutableArray.Create(new Span(match.MatchStart, match.MatchLength))));
         }
 
-        // Always a hard selection on the best match, so Enter / Tab pick it without arrow keys (as SQL Prompt does).
+        // A hard selection on the best match, so Enter / Tab pick it without arrow keys (as SQL Prompt does). Optional
+        // words (ASC / DESC after an ORDER BY item) are soft-selected until a letter is typed: Tab picks, Enter is a new line.
+        var soft = typed.Length == 0 && items[matches[0].Index].Properties.ContainsProperty(SqlCompletionSource.OptionalProperty);
         return Task.FromResult<FilteredCompletionModel?>(new FilteredCompletionModel(
-            shown.MoveToImmutable(), 0, ImmutableArray<CompletionFilterWithState>.Empty, UpdateSelectionHint.Selected, centerSelection: true, uniqueItem: null));
+            shown.MoveToImmutable(), 0, ImmutableArray<CompletionFilterWithState>.Empty,
+            soft ? UpdateSelectionHint.SoftSelected : UpdateSelectionHint.Selected, centerSelection: true, uniqueItem: null));
     }
 
     /// <summary>

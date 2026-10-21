@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.15, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.17, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -34,9 +34,14 @@ type). It opens **right after the space**, without Ctrl+J:
 | You type | The list shows |
 |---|---|
 | `FROM ` / `JOIN ` / `INSERT INTO ` / `UPDATE ` / `DELETE FROM ` | Tables, then views, then table-valued functions, with schema (`dbo.Orders`). No roles, schemas or system objects |
+| `TRUNCATE TABLE ` / `DROP TABLE ` / `DROP TABLE IF EXISTS ` / `ALTER TABLE ` / `MERGE ` / `MERGE INTO ` / `USING ` (in a MERGE) | The same list. Not after `CREATE TABLE ` (a new name) |
 | `EXEC ` | Stored procedures |
 | `UPDATE dbo.Orders SET ` (and after each `, ` in the SET list) | The columns you can update: no identity, computed or rowversion columns |
 | `... WHERE ` (and after `AND ` / `OR ` / `(` in the WHERE clause) | The columns of the tables in the statement, with their types |
+| `ORDER ` / `GROUP ` / `PARTITION ` | `BY` (Enter or Tab picks it) |
+| `... ORDER BY ` / `... GROUP BY ` (and after each `, ` in the list) | The same columns |
+| `... HAVING ` (and after `AND ` / `OR ` / `(`) | The same columns |
+| `ORDER BY o.OrderDate ` (after a column, a number or a function call) | `DESC` / `ASC`. Not selected until you type: **Tab** picks, **Enter** is still a new line |
 | `JOIN dbo.Orders o ` / `... ON ` | The [JOIN helper's](#join-helper) conditions first, then the columns of every table so far (the joined table first) |
 | `... ON o.CustomerId = ` (and after `AND ` / `OR ` / `( ` in the ON condition) | The columns of the tables so far, the joined table first |
 | `o.` (an alias or table name of the statement, anywhere: SELECT list, WHERE, ...) | The columns of that table, right after the dot |
@@ -54,7 +59,7 @@ type). It opens **right after the space**, without Ctrl+J:
 - **Only the text left of the caret filters**: with the caret at the start of a name the list shows everything;
   in `dbo.Or|ders` it filters by `dbo.Or`.
 - **The list closes** as soon as nothing matches what you typed.
-- **In a WHERE clause** columns are inserted with the table's alias (`o.OrderId`). With several tables and no
+- **In WHERE, HAVING, ORDER BY and GROUP BY** columns are inserted with the table's alias (`o.OrderId`). With several tables and no
   alias, the table name is used (`Orders.OrderId`); one table without an alias gives just `OrderId`. After
   `UPDATE ... SET` and after `o.` names go in without a prefix.
 - **A space ends a name and opens the next list**: `SELECT * from` + space closes the keyword list and opens the
@@ -63,7 +68,7 @@ type). It opens **right after the space**, without Ctrl+J:
   and the list opens there.
 - **Picking a table after `INSERT INTO`** or **a procedure after `EXEC`** with Enter or Tab then runs the INSERT /
   EXEC helper as before (Shift+Enter gives the compact form).
-- **Everywhere else** (`dbo.` outside FROM, `ORDER BY`, functions, variables, ...) SSMS's own IntelliSense list works as
+- **Everywhere else** (`dbo.` outside FROM, the SELECT list, `PARTITION BY`, functions, variables, ...) SSMS's own IntelliSense list works as
   before. SSMS's red error underlines and tooltips are not affected.
 - The first time on a database the list waits for the schema to load (`loading schema for ...` in the status bar)
   and then opens by itself, as long as you have not typed or moved meanwhile. The status bar then says
@@ -487,7 +492,7 @@ This changes every row. Run anyway?
 
 | Setting | Default | What it switches |
 |---|---|---|
-| Completion list | On | Our list after `FROM ` / `JOIN ` / `INTO ` / `UPDATE ` / `EXEC `, `SET `, `WHERE `, `SELECT * `. Off: SSMS's list everywhere |
+| Completion list | On | Our list after `FROM ` / `JOIN ` / `INTO ` / `UPDATE ` / `EXEC ` / `TRUNCATE TABLE ` / `MERGE `, `SET `, `WHERE ` / `HAVING ` / `ORDER BY ` / `GROUP BY `, `SELECT * `. Off: SSMS's list everywhere |
 | Snippets | On | Tab expands `ssf`, `ii`, `upd`, `df`, `bt`, ... |
 | JOIN list opens automatically | On | The join conditions after `JOIN table alias ` and `ON ` (in the completion list, or the JOIN list when that is off). Off: use the Suggest Join command or Ctrl+J |
 | INSERT helper | On | Tab / Shift+Enter / IntelliSense pick after `INSERT INTO table` |

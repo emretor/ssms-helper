@@ -99,6 +99,102 @@ public class CompletionContextAnalyzerTests
     }
 
     [Theory]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY |", "dbo.Orders o")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY Ord|", "dbo.Orders o")]
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Id = 1 ORDER BY o.OrderDate DESC, |", "dbo.Orders o")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.OrderDate, |", "dbo.Orders o")]
+    [InlineData("SELECT o.CustomerId, COUNT(*) FROM dbo.Orders o JOIN dbo.Customers c ON c.Id = o.CustomerId GROUP BY |", "dbo.Orders o, dbo.Customers c")]
+    [InlineData("SELECT o.CustomerId FROM dbo.Orders o GROUP BY o.CustomerId, |", "dbo.Orders o")]
+    [InlineData("SELECT o.CustomerId FROM dbo.Orders o GROUP BY o.CustomerId HAVING |", "dbo.Orders o")]
+    [InlineData("SELECT o.CustomerId FROM dbo.Orders o GROUP BY o.CustomerId HAVING COUNT(*) > 1 AND |", "dbo.Orders o")]
+    [InlineData("SELECT a FROM dbo.Lines UNION SELECT b FROM dbo.Orders o ORDER BY |", "dbo.Orders o")]
+    [InlineData("SELECT * FROM dbo.Orders\nORDER BY\n    |", "dbo.Orders")]
+    public void Columns_InOrderByGroupByHaving(string text, string tables)
+    {
+        var context = Analyze(text.Replace("\\n", "\n"))!;
+        Assert.Equal(CompletionKind.Columns, context.Kind);
+        Assert.False(context.UpdatableOnly);
+        Assert.False(context.AfterQualifier);
+        Assert.Equal(tables, Tables(context));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.OrderDate |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.OrderDate d|")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY OrderDate |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY 2 |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY [Order Date] |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.[Order Date] |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY COUNT(*) |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY ISNULL(o.ShippedAt, o.OrderDate) |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.Id DESC, o.OrderDate |")]
+    [InlineData("SELECT ROW_NUMBER() OVER (ORDER BY o.OrderDate |")]
+    public void SortOrder_AfterAnOrderByItem(string text)
+    {
+        Assert.Equal(CompletionKind.SortOrder, Analyze(text)!.Kind);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.OrderDate DESC |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.Id + o.Total |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.Id OFFSET 10 |")]
+    [InlineData("SELECT o.CustomerId FROM dbo.Orders o GROUP BY o.CustomerId |")]
+    [InlineData("SELECT ROW_NUMBER() OVER (PARTITION BY o.CustomerId |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY o.Id COLLATE Latin1_General_CI_AS |")]
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Id IN (1, |")]
+    [InlineData("SELECT a, |")]
+    public void NoSortOrderOrColumns(string text)
+    {
+        Assert.NotEqual(CompletionKind.SortOrder, Analyze(text)?.Kind);
+        Assert.NotEqual(CompletionKind.Columns, Analyze(text)?.Kind);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER |", 33)]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER b|", 33)]
+    [InlineData("SELECT o.CustomerId FROM dbo.Orders o GROUP |", 44)]
+    [InlineData("SELECT ROW_NUMBER() OVER (PARTITION |", 36)]
+    [InlineData("SELECT ROW_NUMBER() OVER (PARTITION BY o.CustomerId ORDER |", 58)]
+    public void By_AfterOrderGroupPartition(string text, int replaceStart)
+    {
+        Assert.Equal(CompletionContext.Of(CompletionKind.By, replaceStart), Analyze(text));
+    }
+
+    [Theory]
+    [InlineData("SELECT STRING_AGG(x, ',') WITHIN GROUP |")]
+    [InlineData("SELECT o.Order |")]
+    [InlineData("SELECT * FROM dbo.Orders o ORDER BY |")]
+    public void NoBy(string text)
+    {
+        Assert.NotEqual(CompletionKind.By, Analyze(text)?.Kind);
+    }
+
+    [Theory]
+    [InlineData("TRUNCATE TABLE |", 15)]
+    [InlineData("TRUNCATE TABLE dbo.Or|", 15)]
+    [InlineData("DROP TABLE |", 11)]
+    [InlineData("DROP TABLE IF EXISTS |", 21)]
+    [InlineData("ALTER TABLE |", 12)]
+    [InlineData("MERGE |", 6)]
+    [InlineData("MERGE INTO |", 11)]
+    [InlineData("MERGE INTO dbo.Orders AS t\nUSING |", 33)]
+    [InlineData("MERGE dbo.Orders t USING |", 25)]
+    public void Objects_AfterTableStatements(string text, int replaceStart)
+    {
+        Assert.Equal(CompletionContext.Of(CompletionKind.Objects, replaceStart), Analyze(text.Replace("\\n", "\n")));
+    }
+
+    [Theory]
+    [InlineData("CREATE TABLE |")]
+    [InlineData("DECLARE @t TABLE |")]
+    [InlineData("SELECT * FROM a WHERE EXISTS |")]
+    [InlineData("SELECT * FROM a CROSS APPLY dbo.f() USING |")]
+    public void NoObjects_ForNewNamesOrOtherUses(string text)
+    {
+        Assert.NotEqual(CompletionKind.Objects, Analyze(text)?.Kind);
+    }
+
+    [Theory]
     [InlineData("SELECT * FROM dbo.Orders |")]               // alias position
     [InlineData("SELECT * FROM dbo.Orders o WHERE|")]        // no space yet
     [InlineData("SELECT |")]

@@ -7,13 +7,19 @@ namespace SsmsHelper.Core.Completion;
 
 public enum CompletionKind
 {
-    /// <summary>Tables, views and table-valued functions: after FROM, JOIN, INTO, UPDATE.</summary>
+    /// <summary>
+    /// Tables, views and table-valued functions: after FROM, JOIN, INTO, UPDATE, TRUNCATE / DROP / ALTER TABLE,
+    /// MERGE and USING.
+    /// </summary>
     Objects,
 
     /// <summary>Stored procedures: after EXEC / EXECUTE.</summary>
     Procedures,
 
-    /// <summary>Columns of <see cref="CompletionContext.Tables"/>: after UPDATE ... SET, in a WHERE clause, after "alias.".</summary>
+    /// <summary>
+    /// Columns of <see cref="CompletionContext.Tables"/>: after UPDATE ... SET, in WHERE and HAVING, in ORDER BY and
+    /// GROUP BY lists, after "alias.".
+    /// </summary>
     Columns,
 
     /// <summary>Keywords that can follow "SELECT *": FROM, INTO, ...</summary>
@@ -21,6 +27,12 @@ public enum CompletionKind
 
     /// <summary>Databases of the server: after USE.</summary>
     Databases,
+
+    /// <summary>DESC / ASC: after an ORDER BY item and a space ("ORDER BY o.OrderDate |").</summary>
+    SortOrder,
+
+    /// <summary>BY: after ORDER, GROUP and PARTITION ("ORDER |").</summary>
+    By,
 
     /// <summary>
     /// Join conditions for <see cref="CompletionContext.Join"/>, then the columns of <see cref="CompletionContext.Tables"/>
@@ -169,6 +181,16 @@ public static class CompletionContextAnalyzer
             return CompletionContext.Of(CompletionKind.Keywords, replaceStart);
         }
 
+        if (EndsOrderByItem(tokens, anchor))
+        {
+            return CompletionContext.Of(CompletionKind.SortOrder, replaceStart);
+        }
+
+        if (IsByKeyword(tokens, anchor))
+        {
+            return CompletionContext.Of(CompletionKind.By, replaceStart);
+        }
+
         if (SetTarget(text, tokens, anchor) is { } target)
         {
             return new CompletionContext(CompletionKind.Columns, replaceStart, new[] { target }, UpdatableOnly: true);
@@ -270,14 +292,137 @@ public static class CompletionContextAnalyzer
     private static bool IsObjectKeyword(IReadOnlyList<SqlToken> tokens, int i)
     {
         var t = tokens[i];
-        if (t.IsWord("FROM") || t.IsWord("JOIN") || t.IsWord("INTO"))
+        if (t.IsWord("FROM") || t.IsWord("JOIN") || t.IsWord("INTO") || t.IsWord("MERGE"))
         {
             return true;
+        }
+
+        // TRUNCATE TABLE, DROP TABLE, ALTER TABLE, DROP TABLE IF EXISTS. Not CREATE TABLE (a new name) or DECLARE @t TABLE.
+        if (t.IsWord("TABLE"))
+        {
+            return i > 0 && (tokens[i - 1].IsWord("TRUNCATE") || tokens[i - 1].IsWord("DROP") || tokens[i - 1].IsWord("ALTER"));
+        }
+
+        if (t.IsWord("EXISTS"))
+        {
+            return i >= 3 && tokens[i - 1].IsWord("IF") && tokens[i - 2].IsWord("TABLE") && tokens[i - 3].IsWord("DROP");
+        }
+
+        if (t.IsWord("USING"))
+        {
+            return InMerge(tokens, i);
         }
 
         // UPDATE as a statement, not ON UPDATE / FOR UPDATE / GRANT UPDATE / AFTER UPDATE.
         return t.IsWord("UPDATE") &&
                (i == 0 || !(tokens[i - 1].Kind == SqlTokenKind.Word && NotStatementBefore(tokens[i - 1].Text) || tokens[i - 1].IsPunctuation(',')));
+    }
+
+    /// <summary>"MERGE [INTO] target [AS t] USING": the statement around token i is a MERGE.</summary>
+    private static bool InMerge(IReadOnlyList<SqlToken> tokens, int i)
+    {
+        var depth = 0;
+        for (var k = i - 1; k >= 0; k--)
+        {
+            var t = tokens[k];
+            if (t.IsPunctuation(')'))
+            {
+                depth++;
+            }
+            else if (t.IsPunctuation('('))
+            {
+                if (depth == 0)
+                {
+                    return false;
+                }
+
+                depth--;
+            }
+            else if (depth == 0)
+            {
+                if (t.IsWord("MERGE"))
+                {
+                    return true;
+                }
+
+                if (t.IsPunctuation(';') || (t.Kind == SqlTokenKind.Word && StatementWords.Contains(t.Text) && !t.IsWord("WITH")))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// "ORDER BY o.OrderDate |", "ORDER BY 2 |", "ORDER BY COUNT(*) |", "ORDER BY a DESC, [b] |": the anchor ends an
+    /// ORDER BY item that is a name, a number or a function call right after BY or a comma. Not after PARTITION BY,
+    /// GROUP BY, ASC / DESC, an expression ("a + b") or OFFSET n.
+    /// </summary>
+    private static bool EndsOrderByItem(IReadOnlyList<SqlToken> tokens, int anchor)
+    {
+        var a = tokens[anchor];
+        var i = anchor;
+        if (a.IsPunctuation(')'))
+        {
+            var depth = 0;
+            for (; i >= 0; i--)
+            {
+                if (tokens[i].IsPunctuation(')'))
+                {
+                    depth++;
+                }
+                else if (tokens[i].IsPunctuation('(') && --depth == 0)
+                {
+                    break;
+                }
+            }
+
+            i--; // the function name
+            if (i < 0 || !tokens[i].IsIdentifier)
+            {
+                return false;
+            }
+        }
+        else if (a.Kind == SqlTokenKind.Number)
+        {
+            // a single number: ORDER BY 2
+        }
+        else if (!a.IsIdentifier || a.IsWord("ASC") || a.IsWord("DESC") || a.IsWord("BY"))
+        {
+            return false;
+        }
+
+        // Back over "schema.function" / "o.[Order Date]".
+        while (i >= 2 && tokens[i - 1].IsPunctuation('.') && tokens[i - 2].IsIdentifier)
+        {
+            i -= 2;
+        }
+
+        var previous = i - 1;
+        if (previous < 0)
+        {
+            return false;
+        }
+
+        var by = tokens[previous].IsPunctuation(',') ? ClauseBefore(tokens, previous) : previous;
+        return by > 0 && tokens[by].IsWord("BY") && tokens[by - 1].IsWord("ORDER") &&
+               (by == previous || ListSeparatorsOnly(tokens, by, previous));
+    }
+
+    // Between "BY" and the comma at previous: a plain list at this level, not "ORDER BY a OFFSET 1 ROWS, ...".
+    private static bool ListSeparatorsOnly(IReadOnlyList<SqlToken> tokens, int by, int previous)
+    {
+        for (var k = by + 1; k < previous; k++)
+        {
+            if (tokens[k].IsWord("OFFSET") || tokens[k].IsWord("FETCH"))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool NotStatementBefore(string word) =>
@@ -367,6 +512,19 @@ public static class CompletionContextAnalyzer
         }
 
         return start;
+    }
+
+    /// <summary>"ORDER |", "GROUP |", "PARTITION |": the next word is BY. Not "WITHIN GROUP (" or "x.Order".</summary>
+    private static bool IsByKeyword(IReadOnlyList<SqlToken> tokens, int anchor)
+    {
+        var t = tokens[anchor];
+        if (!t.IsWord("ORDER") && !t.IsWord("GROUP") && !t.IsWord("PARTITION"))
+        {
+            return false;
+        }
+
+        var previous = anchor > 0 ? tokens[anchor - 1] : null;
+        return previous is null || !(previous.IsPunctuation('.') || (t.IsWord("GROUP") && previous.IsWord("WITHIN")));
     }
 
     /// <summary>"SELECT *", "SELECT DISTINCT *", "SELECT TOP (10) *".</summary>
@@ -504,21 +662,22 @@ public static class CompletionContextAnalyzer
     }
 
     /// <summary>
-    /// After WHERE, or after AND / OR / NOT / "(" inside a WHERE clause: the tables of that statement (FROM / JOIN
-    /// sources and the UPDATE or DELETE target).
+    /// After WHERE, HAVING, ORDER BY or GROUP BY, after AND / OR / NOT / "(" inside one of them, or after a comma in an
+    /// ORDER BY / GROUP BY list (SSM-66): the tables of that statement (FROM / JOIN sources and the UPDATE or DELETE
+    /// target).
     /// </summary>
     private static List<TableReference>? WhereTables(string text, IReadOnlyList<SqlToken> tokens, int anchor)
     {
         var a = tokens[anchor];
         int where;
-        if (a.IsWord("WHERE"))
+        if (IsFilterClause(tokens, anchor))
         {
             where = anchor;
         }
-        else if (a.IsWord("AND") || a.IsWord("OR") || a.IsWord("NOT") || a.IsPunctuation('('))
+        else if (a.IsWord("AND") || a.IsWord("OR") || a.IsWord("NOT") || a.IsPunctuation('(') || a.IsPunctuation(','))
         {
-            where = ClauseBefore(tokens, a.IsPunctuation('(') ? anchor : anchor);
-            if (where < 0 || !tokens[where].IsWord("WHERE"))
+            where = ClauseBefore(tokens, anchor);
+            if (where < 0 || !IsFilterClause(tokens, where) || (a.IsPunctuation(',') && !tokens[where].IsWord("BY")))
             {
                 return null;
             }
@@ -608,6 +767,14 @@ public static class CompletionContextAnalyzer
         }
 
         return null;
+    }
+
+    // WHERE, HAVING, ORDER BY, GROUP BY (not PARTITION BY).
+    private static bool IsFilterClause(IReadOnlyList<SqlToken> tokens, int i)
+    {
+        var t = tokens[i];
+        return t.IsWord("WHERE") || t.IsWord("HAVING") ||
+               (t.IsWord("BY") && i > 0 && (tokens[i - 1].IsWord("ORDER") || tokens[i - 1].IsWord("GROUP")));
     }
 
     /// <summary>Index of the nearest clause word before <paramref name="i"/> at the same parenthesis level, or -1.</summary>

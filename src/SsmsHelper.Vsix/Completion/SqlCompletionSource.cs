@@ -57,6 +57,9 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
     internal const string GroupProperty = "SsmsHelper.Group";
     internal const string TierProperty = "SsmsHelper.Tier";
 
+    /// <summary>Optional words (ASC / DESC): soft-selected until something is typed, so Enter still starts a new line.</summary>
+    internal const string OptionalProperty = "SsmsHelper.Optional";
+
     private static readonly ImageElement TableIcon = new(KnownMonikers.Table.ToImageId(), "Table");
     private static readonly ImageElement ViewIcon = new(KnownMonikers.View.ToImageId(), "View");
     private static readonly ImageElement FunctionIcon = new(KnownMonikers.MethodPublic.ToImageId(), "Function");
@@ -177,6 +180,16 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
         if (context.Kind == CompletionKind.Keywords)
         {
             return new CompletionContext(KeywordItems());
+        }
+
+        if (context.Kind == CompletionKind.SortOrder)
+        {
+            return new CompletionContext(SortOrderItems());
+        }
+
+        if (context.Kind == CompletionKind.By)
+        {
+            return new CompletionContext(ImmutableArray.Create(Item("BY", KeywordIcon, string.Empty, group: 0)));
         }
 
         if (context.Kind == CompletionKind.Databases)
@@ -368,6 +381,15 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
         PrimaryKeywords.Select(k => Item(k, KeywordIcon, string.Empty, group: 0))
             .Concat(StatementKeywords.Select(k => Item(k, KeywordIcon, string.Empty, group: 1)))
             .ToImmutableArray();
+
+    private ImmutableArray<CompletionItem> SortOrderItems()
+    {
+        var asc = Item("ASC", KeywordIcon, "ascending", group: 0);
+        var desc = Item("DESC", KeywordIcon, "descending", group: 0);
+        asc.Properties.AddProperty(OptionalProperty, true);
+        desc.Properties.AddProperty(OptionalProperty, true);
+        return ImmutableArray.Create(desc, asc); // DESC first: the more common pick (latest first)
+    }
 
     /// <param name="insertPrefix">Written before the text on a pick ("ON "), not shown and not matched.</param>
     private CompletionItem Item(string text, ImageElement icon, string suffix, int group, int tier = 0, string insertPrefix = "")
