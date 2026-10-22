@@ -23,6 +23,10 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
     private readonly Func<SnippetExpander> _expander;
     private readonly IntelliSenseSessions _intelliSense;
 
+    // The quote pair just added (SSM-67): Backspace between them, with nothing else changed, removes both.
+    private int _quotePairVersion = -1;
+    private int _quotePairCaret;
+
     public SqlEditorCommandFilter(
         IWpfTextView view,
         Func<SnippetExpander> expander,
@@ -128,6 +132,24 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
         }
 
         var typed = key == EditorKey.TypeChar ? GetTypedChar(pvaIn) : null;
+
+        // Close quotes (SSM-67): only on ' and on Backspace right after a pair, so typing other keys costs nothing.
+        var quote = QuoteAction.None;
+        if (isEditorCommand && settings.CloseQuotes)
+        {
+            if (typed == '\'')
+            {
+                quote = SafeQuoteAction();
+                if (quote == QuoteAction.StepOver && SafeInvoke(StepOverQuote))
+                {
+                    return VSConstants.S_OK;
+                }
+            }
+            else if (key == EditorKey.Backspace && _quotePairVersion >= 0 && SafeInvoke(RemoveQuotePair))
+            {
+                return VSConstants.S_OK;
+            }
+        }
         var isCommitKey = (settings.InsertHelper || settings.ExecHelper) && InsertKeyRules.MayCommitCompletion(key);
         var layout = InsertKeyRules.AfterKeyLayout(key, shiftOnly);
         var execAfterLayout = ExecKeyRules.AfterKeyLayout(key, shiftOnly);
@@ -136,6 +158,11 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
 
         if (isEditorCommand && ErrorHandler.Succeeded(result))
         {
+            if (quote == QuoteAction.Pair)
+            {
+                SafeInvoke(AddClosingQuote);
+            }
+
             SafeInvoke(() =>
             {
                 // Enter or Tab may have committed an IntelliSense name after "INSERT INTO" or "EXEC".
@@ -207,6 +234,84 @@ internal sealed class SqlEditorCommandFilter : IOleCommandTarget
             return false;
         }
     }
+
+    private QuoteAction SafeQuoteAction()
+    {
+        try
+        {
+            return QuoteActionAtCaret();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Close quotes failed.", ex);
+            return QuoteAction.None;
+        }
+    }
+
+    /// <summary>What typing ' does here. Scans the text before the caret: only on the ' key.</summary>
+    private QuoteAction QuoteActionAtCaret()
+    {
+        if (!CaretGuard.CanExpand(_view.Selection.IsEmpty, _view.Selection.SelectedSpans.Count, _view.Caret.InVirtualSpace) ||
+            CaretPosition() is not { } caret)
+        {
+            return QuoteAction.None;
+        }
+
+        var snapshot = _view.TextBuffer.CurrentSnapshot;
+        return QuoteRules.OnQuote(snapshot.GetText(0, Math.Min(snapshot.Length, caret + 2)), caret);
+    }
+
+    /// <summary>
+    /// After SSMS typed the ': a second ' at the caret, the caret back between them. A separate edit, so the first
+    /// Ctrl+Z removes only the added quote.
+    /// </summary>
+    private bool AddClosingQuote()
+    {
+        var buffer = _view.TextBuffer;
+        if (CaretPosition() is not { } caret || caret == 0 || buffer.CurrentSnapshot[caret - 1] != '\'')
+        {
+            return false;
+        }
+
+        buffer.Insert(caret, "'");
+        _view.Caret.MoveTo(new SnapshotPoint(buffer.CurrentSnapshot, caret));
+        _quotePairVersion = buffer.CurrentSnapshot.Version.VersionNumber;
+        _quotePairCaret = caret;
+        return true;
+    }
+
+    /// <summary>"'abc|'" + ': the caret steps over the closing quote.</summary>
+    private bool StepOverQuote()
+    {
+        if (CaretPosition() is not { } caret)
+        {
+            return false;
+        }
+
+        _view.Caret.MoveTo(new SnapshotPoint(_view.TextBuffer.CurrentSnapshot, caret + 1));
+        _view.Caret.EnsureVisible();
+        return true;
+    }
+
+    /// <summary>Backspace right after a pair was added ("'|'"): removes both quotes.</summary>
+    private bool RemoveQuotePair()
+    {
+        var buffer = _view.TextBuffer;
+        var snapshot = buffer.CurrentSnapshot;
+        var pairVersion = _quotePairVersion;
+        _quotePairVersion = -1;
+        if (snapshot.Version.VersionNumber != pairVersion || !_view.Selection.IsEmpty || CaretPosition() is not { } caret ||
+            caret != _quotePairCaret || caret == 0 || caret >= snapshot.Length || snapshot[caret - 1] != '\'' || snapshot[caret] != '\'')
+        {
+            return false;
+        }
+
+        buffer.Delete(new Span(caret - 1, 2));
+        return true;
+    }
+
+    private int? CaretPosition() =>
+        _view.Caret.Position.Point.GetPoint(_view.TextBuffer, PositionAffinity.Predecessor)?.Position;
 
     private bool TryExpandSnippet()
     {

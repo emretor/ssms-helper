@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.17, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.18, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -11,6 +11,7 @@ package `SsmsHelper.Ssms21.vsix`, best effort).
 - [EXEC helper](#exec-helper)
 - [F12: script the object](#f12-script-the-object)
 - [Copy as INSERT](#copy-as-insert)
+- [Close quotes](#close-quotes)
 - [WHERE safety check](#where-safety-check)
 - [Schema loading and Refresh Schema](#schema-loading-and-refresh-schema)
 - [Options](#options)
@@ -437,6 +438,24 @@ SET IDENTITY_INSERT dbo.Orders OFF;
 - Cost: nothing until you click it. The grid is read through SSMS internals; if an SSMS update changes them,
   the status bar says it cannot read the grid, and nothing else is affected.
 
+## Close quotes
+
+Typing `'` adds the closing quote and puts the cursor between them: `WHERE name LIKE '` gives `''` with the cursor inside.
+
+| You type | Result |
+|---|---|
+| `'` in code (after a space, `(`, `,`, `=`, `N`, ...) | `''` with the cursor between them |
+| `'` right before a closing quote (cursor after `'abc`) | The cursor steps over it, behind `'abc'` |
+| Backspace right after the pair | Both quotes go |
+| Ctrl+Z right after the pair | Only the added quote goes |
+
+- Only one quote: inside a comment or a string (between `It` and `s` in `'Its'`; type `''` there for an escaped quote),
+  right after a letter or digit (`It'`), right before one, before another quote, with a selection or
+  several cursors.
+- Turn it off under [Options](#options) (**Close quotes**).
+- Cost: nothing while you type other keys. On `'` the text before the cursor is scanned once (about a millisecond for
+  a very large script).
+
 ## WHERE safety check
 
 When you execute (F5, Ctrl+E or the Execute button) a script with an `UPDATE` or `DELETE` that has no `WHERE`,
@@ -500,6 +519,7 @@ This changes every row. Run anyway?
 | EXEC helper | On | Tab / Shift+Enter / IntelliSense pick after `EXEC procedure` |
 | F12 scripts the object | On | F12 opens the ALTER / CREATE script in a new window |
 | Copy as INSERT | On | The two Copy as INSERT items on the results grid's right-click menu |
+| Close quotes | On | Typing `'` adds the closing quote |
 | Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
 | Ctrl+Shift+R also reloads the schema | On | SSMS's Refresh Local Cache reloads our schema too |
 | Schema cache minutes | 30 | How long a loaded schema is used before a background refresh (1 to 1440) |

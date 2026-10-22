@@ -61,6 +61,12 @@ public sealed class GeneralOptionsPage : DialogPage
     [DefaultValue(true)]
     public bool CopyAsInsert { get; set; } = true;
 
+    [Category(Helpers)]
+    [DisplayName("Close quotes")]
+    [Description("Typing ' adds the closing quote and puts the cursor between them. Typing ' before the closing quote steps over it; Backspace right after removes both.")]
+    [DefaultValue(true)]
+    public bool CloseQuotes { get; set; } = true;
+
     [Category(Safety)]
     [DisplayName("Ask before UPDATE or DELETE without WHERE")]
     [Description("Execute (F5, Ctrl+E) asks for confirmation when the script has an UPDATE or DELETE without WHERE.")]
@@ -91,6 +97,7 @@ public sealed class GeneralOptionsPage : DialogPage
         ExecHelper = settings.ExecHelper;
         ScriptObject = settings.ScriptObject;
         CopyAsInsert = settings.CopyAsInsert;
+        CloseQuotes = settings.CloseQuotes;
         WhereSafetyCheck = settings.WhereSafetyCheck;
         RefreshWithIntelliSense = settings.RefreshWithIntelliSense;
         SchemaCacheMinutes = settings.SchemaCacheMinutes;
@@ -109,6 +116,7 @@ public sealed class GeneralOptionsPage : DialogPage
             ExecHelper = ExecHelper,
             ScriptObject = ScriptObject,
             CopyAsInsert = CopyAsInsert,
+            CloseQuotes = CloseQuotes,
             WhereSafetyCheck = WhereSafetyCheck,
             RefreshWithIntelliSense = RefreshWithIntelliSense,
             SchemaCacheMinutes = SchemaCacheMinutes,

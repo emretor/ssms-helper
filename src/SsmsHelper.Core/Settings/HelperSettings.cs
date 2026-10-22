@@ -41,6 +41,9 @@ public sealed record HelperSettings
     /// <summary>Results grid right-click: Copy as INSERT (with and without identity).</summary>
     public bool CopyAsInsert { get; init; } = true;
 
+    /// <summary>Typing ' adds the closing quote (SSM-67).</summary>
+    public bool CloseQuotes { get; init; } = true;
+
     /// <summary>Execute asks before running UPDATE or DELETE without WHERE.</summary>
     public bool WhereSafetyCheck { get; init; } = true;
 
@@ -66,6 +69,7 @@ public sealed record HelperSettings
         [nameof(ExecHelper)] = Format(ExecHelper),
         [nameof(ScriptObject)] = Format(ScriptObject),
         [nameof(CopyAsInsert)] = Format(CopyAsInsert),
+        [nameof(CloseQuotes)] = Format(CloseQuotes),
         [nameof(WhereSafetyCheck)] = Format(WhereSafetyCheck),
         [nameof(RefreshWithIntelliSense)] = Format(RefreshWithIntelliSense),
         [nameof(SchemaCacheMinutes)] = SchemaCacheMinutes.ToString(CultureInfo.InvariantCulture),
@@ -82,6 +86,7 @@ public sealed record HelperSettings
         ExecHelper = ReadBool(get, nameof(ExecHelper), Default.ExecHelper),
         ScriptObject = ReadBool(get, nameof(ScriptObject), Default.ScriptObject),
         CopyAsInsert = ReadBool(get, nameof(CopyAsInsert), Default.CopyAsInsert),
+        CloseQuotes = ReadBool(get, nameof(CloseQuotes), Default.CloseQuotes),
         WhereSafetyCheck = ReadBool(get, nameof(WhereSafetyCheck), Default.WhereSafetyCheck),
         RefreshWithIntelliSense = ReadBool(get, nameof(RefreshWithIntelliSense), Default.RefreshWithIntelliSense),
         SchemaCacheMinutes = int.TryParse(get(nameof(SchemaCacheMinutes)), NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes)

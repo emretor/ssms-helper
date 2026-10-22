@@ -247,6 +247,13 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - Python edits of repo files: open with `encoding='utf-8'`. The default cp1252 cannot write characters such as the
   arrow in this file, and a failed write leaves the file empty.
 
+## Close quotes notes (SSM-67)
+
+- Core `Editor/QuoteRules.OnQuote(text, caret)`: Pair / StepOver / None from `SqlLexicalContext` (only on the ' key).
+- `SqlEditorCommandFilter`: StepOver moves the caret instead of passing the key; Pair lets SSMS type the ', then
+  inserts the closing one as a separate edit (first Ctrl+Z removes only that). The pair's buffer version and caret
+  are kept; Backspace at exactly that version and caret deletes both.
+
 ## WHERE safety check notes
 
 - `Core/Safety/UnfilteredWriteDetector`: one tokenizer pass, then a forward scan per UPDATE/DELETE keyword until
