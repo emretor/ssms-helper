@@ -486,6 +486,7 @@ This changes every row. Run anyway?
 - Text in strings and comments is ignored, so dynamic SQL (`EXEC (@sql)`) is not checked.
 - Turn it off under [Options](#options): **Ask before UPDATE or DELETE without WHERE**.
 
+## Schema loading and Refresh Schema
 
 - Tables, views, columns, keys, foreign keys and stored procedures (with parameters) of the window's database are loaded in the background the first
   time a helper needs them, and kept for 30 minutes (change it under [Options](#options)). After that they are reloaded in the background while the old
@@ -613,4 +614,6 @@ All messages start with `SSMS Helper:`.
   Refresh Schema.
 - To see what the extension logs, start SSMS with `Ssms.exe /log`, reproduce the problem, close SSMS and look for
   `SsmsHelper` in `%AppData%\Microsoft\SSMS\22.0_<id>\ActivityLog.xml`.
+- Still stuck: open an [issue](https://github.com/emretor/ssms-helper/issues) with the SSMS and extension versions
+  (Tools > SSMS Helper > About) and the `SsmsHelper` lines from the log.
 - `samples/ShopDemo.sql` creates the `SsmsHelperDemo` database with every case above, for trying things out.

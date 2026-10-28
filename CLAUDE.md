@@ -3,28 +3,29 @@
 SSMS 22 extension in the spirit of Redgate SQL Prompt: Tab snippet expansion (`ssf` → `SELECT * FROM`),
 foreign-key JOIN suggestions, and INSERT statement generation.
 
-- Repo: https://gitlab.com/Emretor/ssms-helper (private)
-- Issues: YouTrack project `SSM` (private). Parent issues are epics, subtasks hold the work.
+- Repo: https://github.com/emretor/ssms-helper (public, MIT). Moved from GitLab in 0.13.23; history before that
+  mentions GitLab merge requests (`!34`), which do not exist on GitHub.
+- Work items: YouTrack project `SSM` (private). Parent issues are epics, subtasks
+  hold the work. Public bug reports arrive as GitHub issues.
+- Never commit personal data: commits use `Emretor <5627143+emretor@users.noreply.github.com>` (set in this
+  clone's git config). Screenshots the user drops in the repo root stay untracked.
 
 ## Workflow (always)
 
 1. Start every change on a new branch from an up-to-date `main`. Never commit to `main` directly.
    Branch names: `feature/ssm-<id>-<short-slug>`, `fix/ssm-<id>-<short-slug>`, or `chore/<slug>` when no issue applies.
 2. Commit messages: imperative summary line, body explaining why, and `Refs SSM-<id>` lines.
-3. Push and open a merge request against `main` in the same step:
+3. Push and open a pull request against `main` in the same step:
    ```
-   git push -u origin <branch> -o merge_request.create -o merge_request.target=main -o merge_request.title="<title>" -o merge_request.remove_source_branch -o merge_request.squash
+   git push -u origin <branch>
+   gh pr create --base main --title "<title>" --body "<description>"
    ```
-   `merge_request.squash` is needed: the project's "Encourage" squash setting only pre-ticks the box for MRs
-   created in the web UI, not for MRs created by a push.
-   The user reviews and merges. Do not merge it yourself.
-   To change an open MR's title or description (glab is not installed), push with
-   `-o merge_request.title=... -o merge_request.description=...`; push options are only sent with a ref update,
-   so add `git commit --allow-empty` first when there is nothing else to push.
+   The repo allows squash merges only and deletes the branch after merging.
+   The user reviews and merges. Do not merge it yourself. `gh pr edit` changes an open PR's title or description.
    The user squash-merges, so branch history does not matter: fix mistakes and follow-up review requests with
-   new commits on the same branch and push them to the open MR. No need to amend, rebase or keep commits tidy.
+   new commits on the same branch and push them to the open PR. No need to amend, rebase or keep commits tidy.
 4. Update the YouTrack issue: In Progress when work starts, a comment with what changed, Done only after the
-   user has verified it in SSMS (or for Core-only work, once tests pass and the MR is merged).
+   user has verified it in SSMS (or for Core-only work, once tests pass and the PR is merged).
 
 ## Layout
 
@@ -45,7 +46,7 @@ Building the VSIX needs SSMS 22 installed: SSMS assemblies are referenced compil
 (default `C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE`). They are Microsoft
 binaries and must never be committed. Integration tests run only when `SSMSHELPER_TEST_SQLSERVER` is set; the
 developer machine has a local SQL Server, so use
-`Server=localhost;Integrated Security=true;TrustServerCertificate=true` and run them before every MR that
+`Server=localhost;Integrated Security=true;TrustServerCertificate=true` and run them before every PR that
 touches metadata queries.
 
 Output: `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`. Install by closing SSMS and double-clicking the file.
@@ -68,7 +69,7 @@ and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoT
 ## Documentation (always)
 
 `docs/FEATURES.md` is the user-facing description of every feature: triggers, keys, rules, examples, status bar
-messages and limitations. Every change that adds or changes user-visible behavior updates it in the same MR
+messages and limitations. Every change that adds or changes user-visible behavior updates it in the same PR
 (new shortcut, key, message, rule, limitation, or a fixed limitation). Keep the version line at the top in sync with
 the version bump. README stays a short overview that links to it; do not duplicate feature details there.
 
@@ -83,7 +84,7 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   (never blocks); loads run in the background and are shared.
 - No allocations proportional to the script in hot paths beyond the one `GetText()` an explicit trigger needs.
 - When a requested feature could slow typing (more scanning, more events, DB round trips), say so to the user
-  with the expected cost before implementing it and let them decide. State the cost in MR descriptions and
+  with the expected cost before implementing it and let them decide. State the cost in PR descriptions and
   YouTrack plans for editor features.
 
 ## Hard constraints
@@ -297,8 +298,8 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - SSM-52 part 1 (done): `ExecuteGuard` calls `SchemaReloadAfterDdl.OnExecute` after the WHERE check (not when it
   cancels). Core `SchemaChangeDetector` (one token pass: CREATE / ALTER / DROP of object types, SELECT INTO, sp_rename,
   USE targets; not #temp). Reloads only keys `SchemaCache.Contains`, 2 s after Execute (Execute fires before the run).
-- SSM-52 part 2 (periodic sys.objects check for changes made elsewhere) needs the user's go-ahead: do not add
-  recurring queries.
+- SSM-52 was closed without part 2: the user decided against a periodic sys.objects check for changes made elsewhere.
+  Do not add recurring queries; Ctrl+Shift+R covers those cases.
 - Every new helper gets a setting and a row in the FEATURES.md Options table.
 
 ## INSERT helper notes
