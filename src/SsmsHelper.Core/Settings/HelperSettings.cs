@@ -41,6 +41,9 @@ public sealed record HelperSettings
     /// <summary>Results grid right-click: Copy as INSERT (with and without identity).</summary>
     public bool CopyAsInsert { get; init; } = true;
 
+    /// <summary>Typing a word where a keyword comes next lists the keywords: gr gives GROUP BY (SSM-69).</summary>
+    public bool ClauseKeywords { get; init; } = true;
+
     /// <summary>Typing ' adds the closing quote (SSM-67).</summary>
     public bool CloseQuotes { get; init; } = true;
 
@@ -72,6 +75,7 @@ public sealed record HelperSettings
         [nameof(ExecHelper)] = Format(ExecHelper),
         [nameof(ScriptObject)] = Format(ScriptObject),
         [nameof(CopyAsInsert)] = Format(CopyAsInsert),
+        [nameof(ClauseKeywords)] = Format(ClauseKeywords),
         [nameof(CloseQuotes)] = Format(CloseQuotes),
         [nameof(WhereSafetyCheck)] = Format(WhereSafetyCheck),
         [nameof(RefreshWithIntelliSense)] = Format(RefreshWithIntelliSense),
@@ -90,6 +94,7 @@ public sealed record HelperSettings
         ExecHelper = ReadBool(get, nameof(ExecHelper), Default.ExecHelper),
         ScriptObject = ReadBool(get, nameof(ScriptObject), Default.ScriptObject),
         CopyAsInsert = ReadBool(get, nameof(CopyAsInsert), Default.CopyAsInsert),
+        ClauseKeywords = ReadBool(get, nameof(ClauseKeywords), Default.ClauseKeywords),
         CloseQuotes = ReadBool(get, nameof(CloseQuotes), Default.CloseQuotes),
         WhereSafetyCheck = ReadBool(get, nameof(WhereSafetyCheck), Default.WhereSafetyCheck),
         RefreshWithIntelliSense = ReadBool(get, nameof(RefreshWithIntelliSense), Default.RefreshWithIntelliSense),

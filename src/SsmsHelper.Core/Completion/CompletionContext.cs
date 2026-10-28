@@ -39,6 +39,12 @@ public enum CompletionKind
     /// (the joined table first): after "JOIN table [alias] " and after "JOIN table [alias] ON".
     /// </summary>
     JoinConditions,
+
+    /// <summary>
+    /// The keywords that can come next, in <see cref="CompletionContext.Words"/> (SSM-69): "FROM dbo.Orders o gr" gives
+    /// GROUP BY, "WHERE a = 1 o" gives OR and ORDER BY. Only while a word is typed.
+    /// </summary>
+    Clauses,
 }
 
 /// <summary>Where a completion list applies and what it lists.</summary>
@@ -49,8 +55,12 @@ public enum CompletionKind
 /// <param name="AfterQualifier">For columns after "o.": the alias is already typed, so names go in unqualified.</param>
 /// <param name="Join">For <see cref="CompletionKind.JoinConditions"/>: the JOIN being written. Its positions are
 /// relative to the analyzed text; use <paramref name="ReplaceStart"/> for the buffer.</param>
+/// <param name="Words">For <see cref="CompletionKind.Clauses"/>: the keywords, most common first.</param>
+/// <param name="SoftSelect">For <see cref="CompletionKind.Clauses"/>: the typed word may also be an alias, so Enter
+/// keeps it and only Tab picks a keyword.</param>
 public sealed record CompletionContext(CompletionKind Kind, int ReplaceStart, IReadOnlyList<TableReference> Tables,
-    bool UpdatableOnly = false, bool AfterQualifier = false, JoinContext? Join = null)
+    bool UpdatableOnly = false, bool AfterQualifier = false, JoinContext? Join = null, IReadOnlyList<string>? Words = null,
+    bool SoftSelect = false)
 {
     public static CompletionContext Of(CompletionKind kind, int replaceStart) => new(kind, replaceStart, Array.Empty<TableReference>());
 }
@@ -221,7 +231,9 @@ public static class CompletionContextAnalyzer
             return new CompletionContext(CompletionKind.Columns, replaceStart, selectTables);
         }
 
-        return null;
+        return first <= before && tokens[first].Kind == SqlTokenKind.Word
+            ? ClauseKeywords.Analyze(text, tokens, anchor, tokens[first].Text, replaceStart)
+            : null;
     }
 
     /// <summary>
@@ -477,7 +489,10 @@ public static class CompletionContextAnalyzer
     /// ORDER BY item that is a name, a number or a function call right after BY or a comma. Not after PARTITION BY,
     /// GROUP BY, ASC / DESC, an expression ("a + b") or OFFSET n.
     /// </summary>
-    private static bool EndsOrderByItem(IReadOnlyList<SqlToken> tokens, int anchor)
+    private static bool EndsOrderByItem(IReadOnlyList<SqlToken> tokens, int anchor) => EndsByItem(tokens, anchor, "ORDER");
+
+    /// <summary>The anchor ends an item of an ORDER BY or GROUP BY list (<paramref name="clause"/>: ORDER or GROUP).</summary>
+    internal static bool EndsByItem(IReadOnlyList<SqlToken> tokens, int anchor, string clause)
     {
         var a = tokens[anchor];
         var i = anchor;
@@ -524,7 +539,7 @@ public static class CompletionContextAnalyzer
         }
 
         var by = tokens[previous].IsPunctuation(',') ? ClauseBefore(tokens, previous) : previous;
-        return by > 0 && tokens[by].IsWord("BY") && tokens[by - 1].IsWord("ORDER") &&
+        return by > 0 && tokens[by].IsWord("BY") && tokens[by - 1].IsWord(clause) &&
                (by == previous || ListSeparatorsOnly(tokens, by, previous));
     }
 
@@ -895,7 +910,7 @@ public static class CompletionContextAnalyzer
     }
 
     /// <summary>Index of the nearest clause word before <paramref name="i"/> at the same parenthesis level, or -1.</summary>
-    private static int ClauseBefore(IReadOnlyList<SqlToken> tokens, int i)
+    internal static int ClauseBefore(IReadOnlyList<SqlToken> tokens, int i)
     {
         var depth = 0;
         for (var k = i - 1; k >= 0; k--)
@@ -924,7 +939,7 @@ public static class CompletionContextAnalyzer
     }
 
     /// <summary>First token of the statement (or subquery) containing token <paramref name="i"/>.</summary>
-    private static int StatementStart(IReadOnlyList<SqlToken> tokens, int i)
+    internal static int StatementStart(IReadOnlyList<SqlToken> tokens, int i)
     {
         var depth = 0;
         for (var k = i - 1; k >= 0; k--)
@@ -961,7 +976,7 @@ public static class CompletionContextAnalyzer
         return 0;
     }
 
-    private static int StatementEnd(string text, IReadOnlyList<SqlToken> tokens, int i)
+    internal static int StatementEnd(string text, IReadOnlyList<SqlToken> tokens, int i)
     {
         var depth = 0;
         for (; i < tokens.Count; i++)

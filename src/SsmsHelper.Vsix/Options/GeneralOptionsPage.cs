@@ -20,6 +20,12 @@ public sealed class GeneralOptionsPage : DialogPage
     public bool CompletionList { get; set; } = true;
 
     [Category(Helpers)]
+    [DisplayName("Keyword list for the next clause")]
+    [Description("Typing a word where a keyword comes next lists the keywords: gr gives GROUP BY after a table, or gives OR / ORDER BY after a condition, li gives LIKE after a column. Needs the completion list.")]
+    [DefaultValue(true)]
+    public bool ClauseKeywords { get; set; } = true;
+
+    [Category(Helpers)]
     [DisplayName("Snippets")]
     [Description("Tab expands snippet shortcuts such as ssf, ii, upd, df and bt.")]
     [DefaultValue(true)]
@@ -103,6 +109,7 @@ public sealed class GeneralOptionsPage : DialogPage
         ExecHelper = settings.ExecHelper;
         ScriptObject = settings.ScriptObject;
         CopyAsInsert = settings.CopyAsInsert;
+        ClauseKeywords = settings.ClauseKeywords;
         CloseQuotes = settings.CloseQuotes;
         WhereSafetyCheck = settings.WhereSafetyCheck;
         RefreshWithIntelliSense = settings.RefreshWithIntelliSense;
@@ -123,6 +130,7 @@ public sealed class GeneralOptionsPage : DialogPage
             ExecHelper = ExecHelper,
             ScriptObject = ScriptObject,
             CopyAsInsert = CopyAsInsert,
+            ClauseKeywords = ClauseKeywords,
             CloseQuotes = CloseQuotes,
             WhereSafetyCheck = WhereSafetyCheck,
             RefreshWithIntelliSense = RefreshWithIntelliSense,

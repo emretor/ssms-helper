@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.24, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.25, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -49,6 +49,32 @@ type). It opens **right after the space**, without Ctrl+J:
 | `o.` (an alias or table name of the statement, anywhere: SELECT list, WHERE, ...) | The columns of that table, right after the dot |
 | `SELECT * ` | Keywords: `FROM`, `INTO`, then statement keywords |
 | `USE ` | The server's databases you can open: yours by name, then `master`, `model`, `msdb`, `tempdb` ("system"). Offline databases are left out |
+
+### Keywords for the next clause
+
+Where a keyword comes next, typing its first letters lists the keywords that fit (no list on a bare space, so
+Enter at the end of a line is still a new line):
+
+| You type | The list shows |
+|---|---|
+| `FROM dbo.Orders o gr` (after a table in FROM / JOIN) | `WHERE`, `JOIN`, `INNER` / `LEFT` / `RIGHT` / `FULL` / `CROSS JOIN`, `CROSS` / `OUTER APPLY`, `GROUP BY`, `ORDER BY`, `UNION [ALL]`, `EXCEPT`, `INTERSECT`; after a JOIN's table `ON` first |
+| `WHERE o.Status = 1 o` (after a whole condition in WHERE, HAVING or ON) | `AND`, `OR`, then the clauses that can follow (`GROUP BY`, `ORDER BY`, ...; after ON also the JOINs and `WHERE`). In UPDATE and DELETE only `AND` / `OR` |
+| `WHERE o.Name li` (after a column, no operator yet) | `LIKE`, `NOT LIKE`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`, `BETWEEN` |
+| `GROUP BY o.CustomerId ha` | `HAVING`, `ORDER BY`, `UNION [ALL]`, `EXCEPT`, `INTERSECT` |
+| `UPDATE dbo.Orders se` / `UPDATE ... SET Note = 'x' wh` | `SET` / `WHERE`, `FROM` |
+| `INSERT INTO dbo.Orders va` (also after the column list) | `VALUES`, `SELECT` |
+| `SELECT o.Id, o.Name fr` | `FROM`, `INTO` |
+
+- It opens only when one of the keywords has a word that starts with what you typed (`jo` finds `LEFT JOIN`), and
+  filters like the other lists: `or` puts `OR` first, then `ORDER BY`.
+- Where the word could also be an alias (`FROM dbo.Orders gr`, a table without an alias) or a column alias
+  (`SELECT o.Name fr`), the keyword is **not selected until you choose**: **Tab** picks it, **Enter** keeps your
+  word. One letter there never opens the list (`FROM dbo.Orders o` is an alias).
+- When what you typed already is the keyword (`WHERE`, `or`), **Enter** keeps it and starts a new line; Tab picks the
+  selected one, the arrow keys reach the others (`or`, Down, Enter gives `ORDER BY`).
+- A pick and a space go on to the next list: `GROUP BY` + space lists the columns, `LEFT JOIN` + space the tables.
+- No connection or schema needed. Cost: a few steps back over the tokens the list already reads, well under a
+  millisecond per key. Turn it off under [Options](#options) (**Keyword list for the next clause**).
 
 - **Typing filters** the list: names that contain what you typed, names that start with it first (shorter names
   first). `gam` finds `dbo.Games`, then `dbo.VideoGames`. With a dot, the whole name is matched (`sales.ord`).
@@ -533,6 +559,7 @@ This changes every row. Run anyway?
 | F12 scripts the object | On | F12 opens the ALTER / CREATE script in a new window |
 | Copy as INSERT | On | The two Copy as INSERT items on the results grid's right-click menu |
 | Close quotes | On | Typing `'` adds the closing quote |
+| Keyword list for the next clause | On | Typing `gr` after a table lists `GROUP BY`, `or` after a condition `OR` / `ORDER BY`, ... |
 | Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
 | Ctrl+Shift+R also reloads the schema | On | SSMS's Refresh Local Cache reloads our schema too |
 | Reload the schema after CREATE / ALTER / DROP | On | Executing DDL reloads the schema a moment later |
