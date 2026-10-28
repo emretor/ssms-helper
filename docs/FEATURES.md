@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.23, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.24, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
