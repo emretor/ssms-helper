@@ -117,8 +117,8 @@ Releases are built locally, because the packages compile against SSMS's own asse
 that bumps the version is merged:
 
 ```powershell
-.\scriptselease.ps1 -DryRun   # checks, both builds and the tests, publishes nothing
-.\scriptselease.ps1          # the same, then tags v<version> and creates the GitHub release
+.\scripts\release.ps1 -DryRun   # checks, both builds and the tests, publishes nothing
+.\scripts\release.ps1          # the same, then tags v<version> and creates the GitHub release
 ```
 
 The script stops if `main` is not clean and up to date, the version differs between files, or that version is
