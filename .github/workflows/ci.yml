@@ -1,0 +1,27 @@
+# Runs the Core tests on every pull request and on main. Core has no SSMS references, so this needs no SSMS;
+# the VSIX itself is built locally (it compiles against SSMS's own assemblies).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Test
+        run: dotnet test --project tests/SsmsHelper.Core.Tests -c Release
