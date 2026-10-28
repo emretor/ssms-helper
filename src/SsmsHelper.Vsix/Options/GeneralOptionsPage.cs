@@ -80,6 +80,12 @@ public sealed class GeneralOptionsPage : DialogPage
     public bool RefreshWithIntelliSense { get; set; } = true;
 
     [Category(Schema)]
+    [DisplayName("Reload the schema after CREATE / ALTER / DROP")]
+    [Description("Executing a script that creates, alters, drops or renames a table, view, procedure or function reloads the SSMS Helper schema of that database a moment later.")]
+    [DefaultValue(true)]
+    public bool ReloadAfterDdl { get; set; } = true;
+
+    [Category(Schema)]
     [DisplayName("Schema cache minutes")]
     [Description("How long a loaded schema is used before it is refreshed in the background (1 to 1440). Refresh Schema reloads at once.")]
     [DefaultValue(HelperSettings.DefaultSchemaCacheMinutes)]
@@ -100,6 +106,7 @@ public sealed class GeneralOptionsPage : DialogPage
         CloseQuotes = settings.CloseQuotes;
         WhereSafetyCheck = settings.WhereSafetyCheck;
         RefreshWithIntelliSense = settings.RefreshWithIntelliSense;
+        ReloadAfterDdl = settings.ReloadAfterDdl;
         SchemaCacheMinutes = settings.SchemaCacheMinutes;
     }
 
@@ -119,6 +126,7 @@ public sealed class GeneralOptionsPage : DialogPage
             CloseQuotes = CloseQuotes,
             WhereSafetyCheck = WhereSafetyCheck,
             RefreshWithIntelliSense = RefreshWithIntelliSense,
+            ReloadAfterDdl = ReloadAfterDdl,
             SchemaCacheMinutes = SchemaCacheMinutes,
         });
 

@@ -27,6 +27,20 @@ public class SchemaCacheTests
     }
 
     [Fact]
+    public async Task Contains_OnlyLoadedKeys_AndStartsNoLoad()
+    {
+        var loads = 0;
+        var cache = new SchemaCache((_, _) => { loads++; return Task.FromResult(Schema()); }, Ttl, () => _now);
+
+        Assert.False(cache.Contains(Key));
+        Assert.Equal(0, loads);
+
+        await cache.GetAsync(Key, Ct);
+        Assert.True(cache.Contains(new DatabaseKey("SRV", "DB")));
+        Assert.False(cache.Contains(new DatabaseKey("srv", "other")));
+    }
+
+    [Fact]
     public async Task Key_IsCaseInsensitive()
     {
         var loads = 0;

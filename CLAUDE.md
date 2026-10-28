@@ -294,7 +294,11 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
 - `IntelliSenseRefreshHook`: DTE `AfterExecute` on SSMS's Refresh Local Cache (RadLangSvc `Commands.RefreshLocalCache`
   = 70; looked up as {52692960-...}/70 and checked by name, then by `Edit.RefreshLocalCache`; the activity log says
   which). Uses `SchemaCache.ReloadAsync`, which keeps the old schema serving while it loads.
-- Automatic change detection (SSM-52) is postponed over the performance concern: do not add recurring queries.
+- SSM-52 part 1 (done): `ExecuteGuard` calls `SchemaReloadAfterDdl.OnExecute` after the WHERE check (not when it
+  cancels). Core `SchemaChangeDetector` (one token pass: CREATE / ALTER / DROP of object types, SELECT INTO, sp_rename,
+  USE targets; not #temp). Reloads only keys `SchemaCache.Contains`, 2 s after Execute (Execute fires before the run).
+- SSM-52 part 2 (periodic sys.objects check for changes made elsewhere) needs the user's go-ahead: do not add
+  recurring queries.
 - Every new helper gets a setting and a row in the FEATURES.md Options table.
 
 ## INSERT helper notes

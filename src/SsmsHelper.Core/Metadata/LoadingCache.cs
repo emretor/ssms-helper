@@ -116,6 +116,15 @@ public class LoadingCache<TKey, TValue>
         return WaitAsync(pending, cancellationToken);
     }
 
+    /// <summary>A value is loaded for the key (stale or not). Starts nothing.</summary>
+    public bool Contains(TKey key)
+    {
+        lock (_gate)
+        {
+            return _entries.TryGetValue(key, out var entry) && entry.Value is not null;
+        }
+    }
+
     /// <summary>Drops the entry. A load already running still completes but its result is discarded.</summary>
     public void Invalidate(TKey key)
     {

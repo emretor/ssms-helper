@@ -50,6 +50,9 @@ public sealed record HelperSettings
     /// <summary>SSMS's Refresh Local Cache (Ctrl+Shift+R) also reloads the SSMS Helper schema.</summary>
     public bool RefreshWithIntelliSense { get; init; } = true;
 
+    /// <summary>Execute with CREATE / ALTER / DROP reloads the schema afterwards (SSM-52 part 1).</summary>
+    public bool ReloadAfterDdl { get; init; } = true;
+
     /// <summary>Minutes before a loaded schema is refreshed in the background, kept within 1 minute and 1 day.</summary>
     public int SchemaCacheMinutes { get; init; } = DefaultSchemaCacheMinutes;
 
@@ -72,6 +75,7 @@ public sealed record HelperSettings
         [nameof(CloseQuotes)] = Format(CloseQuotes),
         [nameof(WhereSafetyCheck)] = Format(WhereSafetyCheck),
         [nameof(RefreshWithIntelliSense)] = Format(RefreshWithIntelliSense),
+        [nameof(ReloadAfterDdl)] = Format(ReloadAfterDdl),
         [nameof(SchemaCacheMinutes)] = SchemaCacheMinutes.ToString(CultureInfo.InvariantCulture),
     };
 
@@ -89,6 +93,7 @@ public sealed record HelperSettings
         CloseQuotes = ReadBool(get, nameof(CloseQuotes), Default.CloseQuotes),
         WhereSafetyCheck = ReadBool(get, nameof(WhereSafetyCheck), Default.WhereSafetyCheck),
         RefreshWithIntelliSense = ReadBool(get, nameof(RefreshWithIntelliSense), Default.RefreshWithIntelliSense),
+        ReloadAfterDdl = ReadBool(get, nameof(ReloadAfterDdl), Default.ReloadAfterDdl),
         SchemaCacheMinutes = int.TryParse(get(nameof(SchemaCacheMinutes)), NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes)
             ? minutes
             : Default.SchemaCacheMinutes,

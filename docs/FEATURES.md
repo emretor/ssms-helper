@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.21, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.23, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -500,7 +500,15 @@ This changes every row. Run anyway?
 - **Tools > SSMS Helper > Refresh Schema** reloads only the SSMS Helper schema and reports the counts.
 - The database list after `USE ` is loaded per server, with one small query, the first time you type `USE `, and kept
   as long as the schema. Ctrl+Shift+R reloads it too (for example after creating a database).
-- Schema changes are not detected automatically (SSM-52, postponed): after changing the schema, press Ctrl+Shift+R.
+- **Executing a schema change reloads it**: when a script you execute (F5) creates, alters, drops or renames a
+  table, view, procedure, function, synonym, type or schema (`CREATE` / `ALTER` / `DROP`, `CREATE OR ALTER`,
+  `SELECT ... INTO dbo.x`, `sp_rename`), the schema of the window's database, and of databases the script `USE`s,
+  reloads about 2 seconds later (`schema for <server>/<db> reloaded after the schema change.`). Only databases the
+  helpers have already loaded. Temp tables, table variables and `OUTPUT ... INTO` do not count. `CREATE` / `ALTER` /
+  `DROP DATABASE` reloads the database list after `USE `. Cost: one pass over the executed text per Execute, no query
+  unless the script has DDL. Turn it off under [Options](#options).
+- Changes made elsewhere (another person, a deployment) are not detected: press Ctrl+Shift+R. The same for DDL in
+  dynamic SQL (`EXEC('CREATE TABLE ...')`, `sp_executesql`) and for a DDL script that runs longer than 2 seconds.
 - A column or parameter of a user-defined type you have no permission on shows its base type (for example
   `nvarchar(20)` instead of `dbo.Code`); before 0.13.10 such a column made the whole load fail.
 - When loading fails (wrong password, disabled login, server down), the helpers wait 30 seconds before trying that
@@ -526,6 +534,7 @@ This changes every row. Run anyway?
 | Close quotes | On | Typing `'` adds the closing quote |
 | Ask before UPDATE or DELETE without WHERE | On | The confirmation on Execute |
 | Ctrl+Shift+R also reloads the schema | On | SSMS's Refresh Local Cache reloads our schema too |
+| Reload the schema after CREATE / ALTER / DROP | On | Executing DDL reloads the schema a moment later |
 | Schema cache minutes | 30 | How long a loaded schema is used before a background refresh (1 to 1440) |
 
 A helper that is off leaves its keys to SSMS: Tab inserts a tab, Shift+Enter starts a new line.
@@ -562,6 +571,7 @@ All messages start with `SSMS Helper:`.
 | `reloading schema for <server>/<db>...` | After Ctrl+Shift+R; the old schema keeps working meanwhile |
 | `loading the database list of <server>...` / `... loaded.` | First `USE ` on this server; the list opens when it is loaded |
 | `schema for <server>/<db> loaded.` | Loading finished |
+| `schema for <server>/<db> reloaded after the schema change.` | You executed CREATE / ALTER / DROP; the helpers now know the change |
 | `loading schema for ... failed: ...` | The extension could not read the catalog (permissions, connection). Tried again after 30 seconds, or at once with Ctrl+Shift+R |
 | `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database (shown once, not on every key) |
 | `<table> not found in <db>.` | INSERT: unknown table (also shown while IntelliSense is still completing a name) |

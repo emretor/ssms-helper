@@ -5,6 +5,7 @@ using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text.Editor;
+using SsmsHelper.Connections;
 using SsmsHelper.Core.Safety;
 using SsmsHelper.Options;
 
@@ -70,22 +71,27 @@ internal static class ExecuteGuard
 
             var text = ExecutedText(view);
             view.Properties[ExecutedTextProperty] = text;
-            if (!SettingsStore.Current.WhereSafetyCheck)
+            if (SettingsStore.Current.WhereSafetyCheck)
             {
-                return;
+                var writes = UnfilteredWriteDetector.Find(text);
+                if (writes.Count > 0 && !Confirm(writes))
+                {
+                    cancelDefault = true;
+                    StatusBar.Show("execution cancelled.");
+                    return;
+                }
             }
 
-            var writes = UnfilteredWriteDetector.Find(text);
-            if (writes.Count > 0 && !Confirm(writes))
+            // SSM-52 part 1: CREATE / ALTER / DROP reloads the schema once the script has had time to run.
+            if (SettingsStore.Current.ReloadAfterDdl)
             {
-                cancelDefault = true;
-                StatusBar.Show("execution cancelled.");
+                SchemaReloadAfterDdl.OnExecute(text);
             }
         }
         catch (Exception ex)
         {
             // Never block execution because of a bug here.
-            Log.Error("WHERE safety check failed", ex);
+            Log.Error("Execute hook (WHERE safety check, schema reload) failed", ex);
         }
     }
 
