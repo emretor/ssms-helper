@@ -11,6 +11,7 @@ stays as fast as SSMS without the extension.
 | Feature | What you type | What you get |
 |---|---|---|
 | **Completion list** | `FROM `, `JOIN `, `WHERE `, `SET `, `ORDER BY `, `EXEC `, `USE ` ... | A clean list of the tables, columns, procedures or databases that fit, right after the space |
+| **Next-clause keywords** | `FROM dbo.Orders o gr`, `WHERE o.Id = 1 o`, `WHERE o.Name li` | `GROUP BY`, `OR` / `ORDER BY`, `LIKE` and the other keywords that fit there |
 | **Snippets** | `ssf` + Tab | `SELECT * FROM `, plus `st100`, `stl`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`, `ij`, `lj`, `ob`, `gb`, `ifs`, `cp` |
 | **JOIN helper** | `JOIN dbo.Orders o ` | The `ON` conditions from foreign keys (and name-based guesses when there are none) |
 | **INSERT helper** | `INSERT INTO dbo.Orders` + Tab | The column list and typed `VALUES`, without identity, computed and rowversion columns |

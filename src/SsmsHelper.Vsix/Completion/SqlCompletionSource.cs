@@ -60,6 +60,14 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
     /// <summary>Optional words (ASC / DESC): soft-selected until something is typed, so Enter still starts a new line.</summary>
     internal const string OptionalProperty = "SsmsHelper.Optional";
 
+    /// <summary>
+    /// Keywords for the next clause (SSM-69). Soft-selected when the word typed may be an alias (SoftProperty) or is the
+    /// keyword already, so Enter keeps it and starts a new line; Tab picks.
+    /// </summary>
+    internal const string ClauseProperty = "SsmsHelper.Clause";
+
+    internal const string SoftProperty = "SsmsHelper.Soft";
+
     private static readonly ImageElement TableIcon = new(KnownMonikers.Table.ToImageId(), "Table");
     private static readonly ImageElement ViewIcon = new(KnownMonikers.View.ToImageId(), "View");
     private static readonly ImageElement FunctionIcon = new(KnownMonikers.MethodPublic.ToImageId(), "Function");
@@ -112,6 +120,14 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
         var end = Math.Min(snapshot.Length, triggerLocation.Position + CompletionContextAnalyzer.Window);
         var window = snapshot.GetText(start, end - start);
         var context = CompletionContextAnalyzer.Analyze(window, triggerLocation.Position - start, start);
+        if (context?.Kind == CompletionKind.Clauses)
+        {
+            // Keywords need no connection and no schema.
+            return SettingsStore.Current.ClauseKeywords
+                ? Participate(context, null, triggerLocation, window, start)
+                : CompletionStartData.DoesNotParticipateInCompletion;
+        }
+
         if (context is null || ActiveConnectionProvider.TryGetCurrent() is not { } connection)
         {
             return CompletionStartData.DoesNotParticipateInCompletion;
@@ -164,7 +180,7 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
         return Participate(context, key, triggerLocation, window, start);
     }
 
-    private CompletionStartData Participate(SqlContext context, DatabaseKey key, SnapshotPoint triggerLocation, string window, int start)
+    private CompletionStartData Participate(SqlContext context, DatabaseKey? key, SnapshotPoint triggerLocation, string window, int start)
     {
         _context = context;
         _key = key;
@@ -181,6 +197,11 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
     {
         var context = _context;
         var key = _key;
+        if (context?.Kind == CompletionKind.Clauses)
+        {
+            return new CompletionContext(ClauseItems(context));
+        }
+
         if (context is null || key is null)
         {
             return CompletionContext.Empty;
@@ -390,6 +411,26 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
         PrimaryKeywords.Select(k => Item(k, KeywordIcon, string.Empty, group: 0))
             .Concat(StatementKeywords.Select(k => Item(k, KeywordIcon, string.Empty, group: 1)))
             .ToImmutableArray();
+
+    /// <summary>The context's keywords in its order (most common first), which the matcher keeps for equal matches.</summary>
+    private ImmutableArray<CompletionItem> ClauseItems(SqlContext context)
+    {
+        var words = context.Words ?? Array.Empty<string>();
+        var builder = ImmutableArray.CreateBuilder<CompletionItem>(words.Count);
+        for (var i = 0; i < words.Count; i++)
+        {
+            var item = Item(words[i], KeywordIcon, string.Empty, group: i);
+            item.Properties.AddProperty(ClauseProperty, true);
+            if (context.SoftSelect)
+            {
+                item.Properties.AddProperty(SoftProperty, true);
+            }
+
+            builder.Add(item);
+        }
+
+        return builder.MoveToImmutable();
+    }
 
     private ImmutableArray<CompletionItem> SortOrderItems()
     {

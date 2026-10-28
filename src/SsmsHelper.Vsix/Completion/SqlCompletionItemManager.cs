@@ -109,7 +109,13 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
 
         // A hard selection on the best match, so Enter / Tab pick it without arrow keys (as SQL Prompt does). Optional
         // words (ASC / DESC after an ORDER BY item) are soft-selected until a letter is typed: Tab picks, Enter is a new line.
-        var soft = typed.Length == 0 && items[matches[0].Index].Properties.ContainsProperty(SqlCompletionSource.OptionalProperty);
+        // Keywords for the next clause (SSM-69) are soft-selected where the word may be an alias, and when it is the
+        // keyword already ("WHERE", "or"), so Enter keeps it and starts a new line.
+        var best = items[matches[0].Index];
+        var soft = (typed.Length == 0 && best.Properties.ContainsProperty(SqlCompletionSource.OptionalProperty)) ||
+                   best.Properties.ContainsProperty(SqlCompletionSource.SoftProperty) ||
+                   (best.Properties.ContainsProperty(SqlCompletionSource.ClauseProperty) &&
+                    string.Equals(best.FilterText, typed, System.StringComparison.OrdinalIgnoreCase));
         return Task.FromResult<FilteredCompletionModel?>(new FilteredCompletionModel(
             shown.MoveToImmutable(), 0, ImmutableArray<CompletionFilterWithState>.Empty,
             soft ? UpdateSelectionHint.SoftSelected : UpdateSelectionHint.Selected, centerSelection: true, uniqueItem: null));

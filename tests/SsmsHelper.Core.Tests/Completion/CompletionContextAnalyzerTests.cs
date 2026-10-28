@@ -236,7 +236,6 @@ public class CompletionContextAnalyzerTests
 
     [Theory]
     [InlineData("SELECT * FROM dbo.Orders |")]               // alias position
-    [InlineData("SELECT * FROM dbo.Orders o WHERE|")]        // no space yet
     [InlineData("SELECT |")]
     [InlineData("SELECT * FROM -- |")]                       // in a comment
     [InlineData("SELECT * FROM /* |")]
