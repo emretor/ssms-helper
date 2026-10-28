@@ -63,6 +63,9 @@ lacks; `ResultsGridReader` falls back to the grid's `Tag` (its index there).
 The VSIX Installer will not reinstall the same version, so bump the version for every build the user should install.
 It also refuses a lower version: always go above the highest version the user has installed, including builds from
 abandoned branches (0.7.1 from a dropped branch made 0.6.5 uninstallable; the next build became 0.7.2).
+Releases: `scripts/release.ps1` (`-DryRun` first) on an up-to-date `main` builds both packages, runs the tests and
+creates release `v<version>` with both files; notes are generated from the merged PRs. Only when the user asks for a
+release. CI (`.github/workflows/ci.yml`) runs only the Core tests: GitHub has no SSMS to build the VSIX.
 The version lives in three places that must match: `Directory.Build.props`, `source.extension.vsixmanifest`,
 and `InstalledProductRegistration` in `SsmsHelperPackage.cs` (plus `ProductInfoTests`).
 
