@@ -98,6 +98,14 @@ WHERE o.object_id = OBJECT_ID(@name);";
     {
         using var db = connection.CreateConnection();
         await db.OpenAsync().ConfigureAwait(false);
+
+        // "OtherDb.dbo.Proc" on a connection without a database in its settings: OBJECT_ID would look in the login's
+        // default database, so compare with where the lookup actually runs.
+        if (reference.Database is not null && !string.Equals(reference.Database, db.Database, StringComparison.OrdinalIgnoreCase))
+        {
+            return (null, $"{reference.Text} is in another database; switch the window to {reference.Database} first.");
+        }
+
         var found = await LookupAsync(db, reference).ConfigureAwait(false);
         if (found is null)
         {
@@ -107,7 +115,9 @@ WHERE o.object_id = OBJECT_ID(@name);";
         var fullName = $"{found.Schema}.{found.Name}";
         if (found.Type == "U")
         {
-            return (ScriptTable(db, found, newLine), $"CREATE script for {fullName}.");
+            return ScriptTable(db, found, newLine) is { } tableScript
+                ? (tableScript, $"CREATE script for {fullName}.")
+                : (null, $"{fullName} was not found by SMO; refresh Object Explorer and try again.");
         }
 
         if (found.Type is "P" or "V" or "FN" or "IF" or "TF" or "TR")
@@ -150,10 +160,14 @@ WHERE o.object_id = OBJECT_ID(@name);";
     }
 
     // The same output as Object Explorer's Script Table as > CREATE: columns, defaults, keys, checks and indexes.
-    private static string ScriptTable(DbConnection db, Found found, string newLine)
+    private static string? ScriptTable(DbConnection db, Found found, string newLine)
     {
         var server = new Server(new ServerConnection((SqlConnection)db));
-        var table = server.Databases[found.Database].Tables[found.Name, found.Schema];
+        var table = server.Databases[found.Database]?.Tables[found.Name, found.Schema];
+        if (table is null)
+        {
+            return null;
+        }
         var options = new ScriptingOptions
         {
             SchemaQualify = true,

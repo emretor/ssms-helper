@@ -84,6 +84,9 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
     private readonly ITextView _view;
     private readonly IAsyncCompletionBroker _broker;
     private SqlContext? _context;
+
+    // The last "not found" message: shown once, not again on every keystroke while the tables stay unknown.
+    private string? _lastMissingMessage;
     private DatabaseKey? _key;
 
     public SqlCompletionSource(ITextView view, IAsyncCompletionBroker broker)
@@ -146,12 +149,18 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
             // Unknown tables after JOIN usually mean the window is on another database; say so, as the JOIN list did.
             if (context.Join is { } join && JoinSuggester.UnresolvedTables(join, schema) is { Count: > 0 } missing)
             {
-                StatusBar.Show($"{string.Join(", ", missing.Select(t => t.FullText))} not found in {key.Database}. Is the query window on the right database?");
+                var message = $"{string.Join(", ", missing.Select(t => t.FullText))} not found in {key.Database}. Is the query window on the right database?";
+                if (message != _lastMissingMessage)
+                {
+                    _lastMissingMessage = message;
+                    StatusBar.Show(message);
+                }
             }
 
             return CompletionStartData.DoesNotParticipateInCompletion; // unknown tables: leave it to SSMS's list
         }
 
+        _lastMissingMessage = null;
         return Participate(context, key, triggerLocation, window, start);
     }
 

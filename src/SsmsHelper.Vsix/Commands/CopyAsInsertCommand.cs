@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Design;
 using System.Data;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.Shell;
 using SsmsHelper.Connections;
 using SsmsHelper.Core.Metadata;
@@ -114,7 +115,12 @@ internal static class CopyAsInsertCommand
             return;
         }
 
-        System.Windows.Clipboard.SetText(script.Text);
+        if (!TrySetClipboard(script.Text))
+        {
+            StatusBar.Show("the clipboard is in use by another program; try Copy as INSERT again.");
+            return;
+        }
+
         var message = $"copied {script.RowCount} row(s) as INSERT into {target.Text}.";
         if (script.SkippedColumns.Count > 0)
         {
@@ -127,6 +133,24 @@ internal static class CopyAsInsertCommand
         }
 
         StatusBar.Show(message);
+    }
+
+    /// <summary>
+    /// Another program (a clipboard manager, Remote Desktop) can hold the clipboard. WPF already retries inside
+    /// SetText (10 x 100 ms, then the same for the flush), so one call; more would freeze SSMS for seconds.
+    /// </summary>
+    private static bool TrySetClipboard(string text)
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(text);
+            return true;
+        }
+        catch (COMException ex)
+        {
+            Log.Error("Copy as INSERT: the clipboard stayed busy.", ex);
+            return false;
+        }
     }
 
     private static bool SchemaFlag(DataRow? row, string column) =>

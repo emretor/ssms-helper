@@ -2,7 +2,7 @@
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <Version>0.13.19</Version>
+    <Version>0.13.21</Version>
     <Company>SsmsHelper</Company>
     <Product>SSMS Helper</Product>
   </PropertyGroup>

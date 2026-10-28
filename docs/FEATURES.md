@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.19, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.21, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -392,7 +392,8 @@ on the same database with:
 Nothing is executed; edit and run the script yourself. Details:
 
 - Names without a schema resolve like the server does (your default schema, then dbo). Three-part names work for
-  the window's own database; for another database the status bar asks you to switch first.
+  the window's own database; for another database the status bar asks you to switch first (also when the
+  connection has no database set and the name points elsewhere than your default database).
 - Encrypted modules, or no `VIEW DEFINITION` permission: the status bar says it cannot be scripted.
 - Synonyms, sequences, table types, temp tables and names with a linked server are not scripted.
 - Also on the menu as **Tools > SSMS Helper > Script Object** (keyboard name `Tools.SSMSHelperScriptObject`); rebind
@@ -562,7 +563,7 @@ All messages start with `SSMS Helper:`.
 | `loading the database list of <server>...` / `... loaded.` | First `USE ` on this server; the list opens when it is loaded |
 | `schema for <server>/<db> loaded.` | Loading finished |
 | `loading schema for ... failed: ...` | The extension could not read the catalog (permissions, connection). Tried again after 30 seconds, or at once with Ctrl+Shift+R |
-| `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database |
+| `<tables> not found in <db>. Is the query window on the right database?` | JOIN: the tables are not in this database (shown once, not on every key) |
 | `<table> not found in <db>.` | INSERT: unknown table (also shown while IntelliSense is still completing a name) |
 | `INSERT for <table>; skipped ...` | INSERT done; lists skipped server-generated columns |
 | `expanded * to <n> column(s).` | SELECT * expansion done |
@@ -574,10 +575,13 @@ All messages start with `SSMS Helper:`.
 | `ALTER script for <name>.` / `CREATE script for <name>.` | F12 opened the script |
 | `<name> is not a table, view, procedure, function or trigger in this database.` | F12: nothing with that name |
 | `<name> is encrypted or you lack VIEW DEFINITION; ...` | F12: no source available |
+| `<name> is in another database; switch the window to <db> first.` | F12 on `OtherDb.dbo.x` |
+| `<name> was not found by SMO; ...` | F12 on a table that was just dropped or renamed |
 | `wrapped in a transaction that rolls back; ...` | Surround with Transaction done |
 | `copied <n> row(s) as INSERT into <table>.` | Copy as INSERT done; also lists left-out columns |
 | `... Table unknown: replace [TargetTable] after pasting.` | Copy as INSERT could not tell the source table |
 | `click into a results grid first.` | Copy as INSERT used without a focused results grid |
+| `the clipboard is in use by another program; ...` | Copy as INSERT: another program (clipboard manager, Remote Desktop) kept the clipboard busy; try again |
 | `cannot read ... from this SSMS version. ...` | Copy as INSERT: SSMS changed its grid; please report it |
 | `execution cancelled.` | You chose Cancel in the WHERE safety check |
 | `no foreign keys or matching key columns found for <table>.` | Suggest Join command found nothing to offer |
