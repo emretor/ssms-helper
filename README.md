@@ -111,6 +111,19 @@ The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/ssms21/SsmsHelp
 SSMS 21 only. Features are developed and checked in SSMS 22 first; anything that relies on SSMS internals may not
 work in SSMS 21.
 
+### Releasing
+
+Releases are built locally, because the packages compile against SSMS's own assemblies. After the pull request
+that bumps the version is merged:
+
+```powershell
+.\scriptselease.ps1 -DryRun   # checks, both builds and the tests, publishes nothing
+.\scriptselease.ps1          # the same, then tags v<version> and creates the GitHub release
+```
+
+The script stops if `main` is not clean and up to date, the version differs between files, or that version is
+already released. Release notes list the pull requests merged since the previous release.
+
 ### Layout
 
 | Project | Target | Purpose |
