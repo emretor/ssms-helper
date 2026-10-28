@@ -1,59 +1,95 @@
 # SSMS Helper
 
-Productivity helpers for SQL Server Management Studio 22, in the spirit of Redgate SQL Prompt:
+Free productivity helpers for **SQL Server Management Studio 22** (and SSMS 21), in the spirit of Redgate SQL
+Prompt. Type less, join faster, and stop running `DELETE` without a `WHERE`.
 
-- **Snippets**: `ssf` + Tab becomes `SELECT * FROM `, plus `st100`, `stl`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`, `ij`, `lj`, `ob`, `gb`, `ifs`, `cp`.
-- **JOIN helper**: after `JOIN dbo.Orders o ` or `... ON `, a list of `ON` conditions from foreign keys.
-- **INSERT helper**: `INSERT INTO dbo.Orders` + Tab writes the column list and typed `VALUES`; Shift+Enter writes
-  the compact form.
-- **Expand `*`**: Tab right after the `*` in `SELECT * FROM ...` replaces it with the column list, one per line;
-  Shift+Enter writes the compact form.
+Everything runs inside SSMS from an in-memory copy of your schema: no database call while you type, and the editor
+stays as fast as SSMS without the extension.
 
-- **Completion list**: a fast, clean list of tables right after `FROM ` (columns after `SET ` / `WHERE `), best match pre-selected.
-- **Options**: Tools > Options > SSMS Helper turns each helper on or off and sets the schema cache time.
-- **Surround with Transaction**: wraps the selection in BEGIN TRANSACTION ... ROLLBACK (COMMIT commented out).
-- **F12**: opens the ALTER script of a procedure, view or function, or the CREATE script of a table, in a new window.
-- **WHERE safety check**: Execute asks before running an `UPDATE` or `DELETE` without `WHERE`.
-- **Copy as INSERT**: right-click selected rows in the results grid to copy them as `INSERT ... VALUES` statements.
-- **EXEC helper**: `EXEC dbo.Procedure` + Tab lists its parameters with empty values and their types.
+## Features
 
-Everywhere: Tab gives the default (wide) form, Shift+Enter the compact one.
-
-**See [docs/FEATURES.md](docs/FEATURES.md) for how every feature works, its keys, rules and messages.**
-
-`samples/ShopDemo.sql` creates a small `SsmsHelperDemo` database for trying the helpers.
-Work is tracked in YouTrack project `SSM`.
-
-> Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS
-> update can break this extension. Bug reports about it should come here, not to Microsoft.
-
-## Layout
-
-| Project | Target | Purpose |
+| Feature | What you type | What you get |
 |---|---|---|
-| `src/SsmsHelper.Core` | netstandard2.0 | All helper logic. No Visual Studio or SSMS references. |
-| `src/SsmsHelper.Vsix` | net48 | In-process VSIX: package, commands, editor hooks, UI. |
-| `tests/SsmsHelper.Core.Tests` | net10.0 | xunit v3 tests for Core. |
+| **Completion list** | `FROM `, `JOIN `, `WHERE `, `SET `, `ORDER BY `, `EXEC `, `USE ` ... | A clean list of the tables, columns, procedures or databases that fit, right after the space |
+| **Snippets** | `ssf` + Tab | `SELECT * FROM `, plus `st100`, `stl`, `scf`, `ii`, `upd`, `df`, `cte`, `bt`, `ij`, `lj`, `ob`, `gb`, `ifs`, `cp` |
+| **JOIN helper** | `JOIN dbo.Orders o ` | The `ON` conditions from foreign keys (and name-based guesses when there are none) |
+| **INSERT helper** | `INSERT INTO dbo.Orders` + Tab | The column list and typed `VALUES`, without identity, computed and rowversion columns |
+| **Expand `*`** | Tab after the `*` in `SELECT * FROM ...` | The column list, one per line |
+| **EXEC helper** | `EXEC dbo.GetOrders` + Tab | The parameters with empty values and their types |
+| **F12** | F12 on an object name | Its `ALTER` (procedure, view, function) or `CREATE` (table) script in a new window |
+| **Copy as INSERT** | Right-click rows in the results grid | The rows as `INSERT ... VALUES` statements |
+| **Surround with Transaction** | Ctrl+K, Ctrl+T | The selection wrapped in `BEGIN TRANSACTION ... ROLLBACK` |
+| **Close quotes** | `'` | `''` with the caret in between |
+| **WHERE safety check** | F5 on `UPDATE` / `DELETE` without `WHERE` | A question before anything runs |
+| **Schema reload** | F5 on `CREATE` / `ALTER` / `DROP` | The helpers know the new table or column a moment later |
 
-The VSIX must target .NET Framework 4.8 because SSMS 22 runs on the Visual Studio 2026 shell,
-which is a .NET Framework process. Modern .NET cannot be loaded in-process.
+Wherever a helper writes code, **Tab** gives the wide form (one item per line) and **Shift+Enter** the compact one.
+Every helper can be turned off under **Tools > Options > SSMS Helper**.
 
-## Prerequisites
+**[docs/FEATURES.md](docs/FEATURES.md) describes every feature in detail: keys, rules, examples, status bar
+messages and limitations.**
 
-- Visual Studio 2026 (any edition). The "Visual Studio extension development" workload is **not**
-  required; the VSSDK build tools come from NuGet.
+## Install
+
+1. Download `SsmsHelper.vsix` (SSMS 22) or `SsmsHelper.Ssms21.vsix` (SSMS 21) from
+   [Releases](https://github.com/emretor/ssms-helper/releases), or [build it yourself](#build-from-source).
+2. Close SSMS and double-click the file. The VSIX Installer lists your SSMS version as a target.
+   If the installer does not open, right-click the file and choose
+   **Open with > Microsoft Visual Studio Version Selector**.
+3. Start SSMS and open **Tools > SSMS Helper > About**.
+
+With both SSMS 22 and 21 installed, install `SsmsHelper.vsix` first. SSMS 22 also accepts packages made for SSMS
+21, so the SSMS 21 package offers SSMS 22 as a target too; the SSMS 21 build cannot load there. Installing the SSMS
+22 package first takes SSMS 22 out of that list (otherwise untick it).
+
+The extension is installed per user under
+`%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>` (`21.0_<id>` for SSMS 21).
+
+## Try it
+
+[`samples/ShopDemo.sql`](samples/ShopDemo.sql) creates a small `SsmsHelperDemo` database with every case the
+helpers handle (foreign keys, composite keys, self references, identity and computed columns). Run it on a
+development server, connect a query window to `SsmsHelperDemo` and follow the examples at the top of the file.
+
+## Uninstall
+
+In SSMS, choose **Tools > SSMS Helper > Uninstall...** and confirm. The Visual Studio extension installer opens,
+asks you to close SSMS, and removes the extension from that SSMS only (repeat in the other SSMS version if both
+have it).
+
+If that fails (or for versions before 0.13.13): close SSMS, delete the extension's folder from the path above, and
+create an empty file named `extensions.configurationchanged` in the `Extensions` folder so SSMS rebuilds its cache.
+
+## Support
+
+> Microsoft does not support third-party SSMS extensions. SSMS does not block them, but an SSMS update can break
+> this extension. Report problems here, not to Microsoft.
+
+Report bugs and ideas in [Issues](https://github.com/emretor/ssms-helper/issues). Include the SSMS version and the
+extension version (both on **Tools > SSMS Helper > About**). [Troubleshooting](docs/FEATURES.md#troubleshooting)
+explains how to get the extension's log.
+
+## Build from source
+
+### Prerequisites
+
+- Visual Studio 2026 (any edition). The "Visual Studio extension development" workload is **not** required; the
+  VSSDK build tools come from NuGet.
 - .NET 10 SDK.
-- SSMS 22, both to run the extension and to build it: the project references SSMS's own assemblies
-  from `C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE`.
-  Pass `-p:SsmsIdeDir=<path to Common7\IDE>` if SSMS is installed elsewhere.
-- SSMS 21 too, only to build the SSMS 21 package (see below).
+- SSMS 22, both to run the extension and to build it: the project references SSMS's own assemblies from
+  `C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE`. Pass
+  `-p:SsmsIdeDir=<path to Common7\IDE>` if SSMS is installed elsewhere. These are Microsoft binaries; they are
+  never copied into the repository or the package.
+- SSMS 21 too, only to build the SSMS 21 package.
 
-## Build and test
+### Build and test
 
 ```powershell
 dotnet build SsmsHelper.slnx -c Release
 dotnet test --project tests/SsmsHelper.Core.Tests
 ```
+
+The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`.
 
 SQL Server integration tests are skipped unless `SSMSHELPER_TEST_SQLSERVER` holds a connection string with
 permission to create databases. Each run creates a uniquely named `SsmsHelperTest_*` database and drops it.
@@ -62,8 +98,6 @@ permission to create databases. Each run creates a uniquely named `SsmsHelperTes
 $env:SSMSHELPER_TEST_SQLSERVER = "Server=localhost;Integrated Security=true;TrustServerCertificate=true"
 dotnet test --project tests/SsmsHelper.Core.Tests
 ```
-
-The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/SsmsHelper.vsix`.
 
 ### SSMS 21 (best effort)
 
@@ -74,29 +108,34 @@ dotnet build src/SsmsHelper.Vsix -c Release -p:SsmsVersion=21
 ```
 
 The package is written to `src/SsmsHelper.Vsix/bin/Release/net48/ssms21/SsmsHelper.Ssms21.vsix` and installs into
-SSMS 21 only. Features are developed and checked in SSMS 22 first; SSMS 21 gets the same code, and anything
-that relies on SSMS internals may not work there.
+SSMS 21 only. Features are developed and checked in SSMS 22 first; anything that relies on SSMS internals may not
+work in SSMS 21.
 
-## Install into SSMS 22 (or 21)
+### Layout
 
-1. Close SSMS.
-2. Double-click `SsmsHelper.vsix` (SSMS 22) or `SsmsHelper.Ssms21.vsix` (SSMS 21). The VSIX Installer lists the
-   SSMS version as a target.
-   If the installer does not open, right-click the file and choose
-   **Open with > Microsoft Visual Studio Version Selector**.
-   `SsmsHelper.Ssms21.vsix` is also offered for SSMS 22: SSMS 22 accepts extensions made for SSMS 21 (as Visual
-   Studio 2026 does for 2022), whatever the package's version range says. **Untick SSMS 22** there; the SSMS 21
-   build cannot load in SSMS 22. `SsmsHelper.vsix` is offered for SSMS 22 only. Installing `SsmsHelper.vsix` first
-   avoids this: SSMS 22 then already has that version and is left out of the SSMS 21 package's list.
-3. Start SSMS and open **Tools > SSMS Helper > About**.
+| Project | Target | Purpose |
+|---|---|---|
+| `src/SsmsHelper.Core` | netstandard2.0 | All helper logic: parsing, snippets, schema model, SQL generation. No Visual Studio or SSMS references, fully unit tested. |
+| `src/SsmsHelper.Vsix` | net48 | The in-process extension: package, commands, editor hooks, UI. |
+| `tests/SsmsHelper.Core.Tests` | net10.0 | xunit v3 tests for Core. |
 
-The extension is installed per user under
-`%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>` (`21.0_<id>` for SSMS 21).
+The extension targets .NET Framework 4.8 because SSMS 22 runs on the Visual Studio 2026 shell, a .NET Framework
+process; modern .NET cannot be loaded in-process.
 
-## Uninstall
+[CLAUDE.md](CLAUDE.md) holds the project's working rules and design notes (performance rules, SSMS quirks, why
+things are built the way they are). It is written for Claude Code, which builds most of this project, and is a
+good read before changing the editor hooks.
 
-In SSMS, choose **Tools > SSMS Helper > Uninstall...** and confirm. The Visual Studio extension installer opens,
-asks you to close SSMS, and removes the extension from that SSMS only (repeat in the other SSMS version if both
-have it). Before 0.13.13, or if that fails: close SSMS, delete the extension's folder from the path above, and
-create (or touch) an empty file named `extensions.configurationchanged` in the `Extensions` folder so SSMS
-rebuilds its cache.
+## Contributing
+
+Issues and pull requests are welcome. For a pull request:
+
+- Keep typing fast: no database calls and no whole-script scans per keystroke (see "Performance" in
+  [CLAUDE.md](CLAUDE.md)).
+- Put logic in `SsmsHelper.Core` with unit tests; keep `SsmsHelper.Vsix` thin.
+- Update [docs/FEATURES.md](docs/FEATURES.md) for every change you can see in SSMS, and add an option to turn new
+  helpers off.
+
+## License
+
+[MIT](LICENSE)
