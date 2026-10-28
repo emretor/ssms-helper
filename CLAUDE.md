@@ -1,7 +1,7 @@
 # SSMS Helper
 
-SSMS 22 extension in the spirit of Redgate SQL Prompt: Tab snippet expansion (`ssf` → `SELECT * FROM`),
-foreign-key JOIN suggestions, and INSERT statement generation.
+SSMS 22 (and 21) extension: completion list, Tab snippet expansion (`ssf` → `SELECT * FROM`), foreign-key JOIN
+suggestions, INSERT generation, safety checks.
 
 - Repo: https://github.com/emretor/ssms-helper (public, MIT). Moved from GitLab in 0.13.23; history before that
   mentions GitLab merge requests (`!34`), which do not exist on GitHub.

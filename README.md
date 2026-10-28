@@ -1,7 +1,7 @@
 # SSMS Helper
 
-Free productivity helpers for **SQL Server Management Studio 22** (and SSMS 21), in the spirit of Redgate SQL
-Prompt. Type less, join faster, and stop running `DELETE` without a `WHERE`.
+Free productivity helpers for **SQL Server Management Studio 22** (and SSMS 21). Type less, join faster, and stop
+running `DELETE` without a `WHERE`.
 
 Everything runs inside SSMS from an in-memory copy of your schema: no database call while you type, and the editor
 stays as fast as SSMS without the extension.
