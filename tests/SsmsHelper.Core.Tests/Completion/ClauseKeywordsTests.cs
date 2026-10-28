@@ -61,6 +61,9 @@ public class ClauseKeywordsTests
     [InlineData("SELECT * FROM dbo.Orders o\r\n|")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1 -- or|")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Note = 'gr|'")]
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1\r\ne|")] // EXEC, END: not EXCEPT
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1\r\ni|")] // IF, INSERT: not INTERSECT
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1\r\nu|")] // UPDATE: not UNION
     public void NoList(string text)
     {
         Assert.NotEqual(CompletionKind.Clauses, Analyze(text)?.Kind);
@@ -70,6 +73,8 @@ public class ClauseKeywordsTests
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1 o|", "OR")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1 an|", "AND")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1 or|", "OR")]
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1 un|", "UNION")]
+    [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status = 1 ex|", "EXCEPT")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Status <> @s gr|", "GROUP BY")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Name LIKE 'A%' or|", "ORDER BY")]
     [InlineData("SELECT * FROM dbo.Orders o WHERE o.Id IN (1, 2) an|", "AND")]

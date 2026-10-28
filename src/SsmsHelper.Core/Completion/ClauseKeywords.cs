@@ -39,6 +39,11 @@ internal static class ClauseKeywords
     private static readonly string[] AfterInsertTarget = { "VALUES", "SELECT" };
     private static readonly string[] AfterSelectItem = { "FROM", "INTO" };
 
+    private static readonly ISet<string> SetOperators = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "UNION", "UNION ALL", "EXCEPT", "INTERSECT",
+    };
+
     // Words that end a SELECT list when scanning back from an item to its SELECT.
     private static readonly ISet<string> SelectListStopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -64,8 +69,11 @@ internal static class ClauseKeywords
             return null;
         }
 
-        // Where the word may be an alias, one letter ("o", "c") is far more often the alias: no list.
-        if ((soft && typed.Length < 2) || !Array.Exists(words, w => StartsAWord(w, typed)))
+        // Where the word may be an alias, one letter ("o", "c") is far more often the alias: no list. One letter does
+        // not open the list for the rare set operators either: "e", "i", "u" after a condition usually start the next
+        // statement (EXEC, IF, UPDATE), not EXCEPT, INTERSECT, UNION.
+        if ((soft && typed.Length < 2) ||
+            !Array.Exists(words, w => StartsAWord(w, typed) && (typed.Length >= 2 || !SetOperators.Contains(w))))
         {
             return null;
         }

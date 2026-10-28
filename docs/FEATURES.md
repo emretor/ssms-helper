@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.25, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.26, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -66,7 +66,8 @@ Enter at the end of a line is still a new line):
 | `SELECT o.Id, o.Name fr` | `FROM`, `INTO` |
 
 - It opens only when one of the keywords has a word that starts with what you typed (`jo` finds `LEFT JOIN`), and
-  filters like the other lists: `or` puts `OR` first, then `ORDER BY`.
+  filters like the other lists: `or` puts `OR` first, then `ORDER BY`. `UNION`, `EXCEPT` and `INTERSECT` need two
+  letters (`un`, `ex`, `in`), so `e`, `i` or `u` starting the next statement (`EXEC`, `IF`, `UPDATE`) opens nothing.
 - Where the word could also be an alias (`FROM dbo.Orders gr`, a table without an alias) or a column alias
   (`SELECT o.Name fr`), the keyword is **not selected until you choose**: **Tab** picks it, **Enter** keeps your
   word. One letter there never opens the list (`FROM dbo.Orders o` is an alias).
