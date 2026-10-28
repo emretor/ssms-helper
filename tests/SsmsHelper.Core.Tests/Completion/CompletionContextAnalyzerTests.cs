@@ -111,7 +111,7 @@ public class CompletionContextAnalyzerTests
     [InlineData("SELECT * FROM dbo.Orders\nORDER BY\n    |", "dbo.Orders")]
     public void Columns_InOrderByGroupByHaving(string text, string tables)
     {
-        var context = Analyze(text.Replace("\\n", "\n"))!;
+        var context = Analyze(text)!;
         Assert.Equal(CompletionKind.Columns, context.Kind);
         Assert.False(context.UpdatableOnly);
         Assert.False(context.AfterQualifier);
@@ -170,6 +170,46 @@ public class CompletionContextAnalyzerTests
     }
 
     [Theory]
+    [InlineData("SELECT | FROM dbo.Orders o", "dbo.Orders o")]
+    [InlineData("SELECT Ord| FROM dbo.Orders o", "dbo.Orders o")]
+    [InlineData("SELECT o.OrderId, | FROM dbo.Orders o", "dbo.Orders o")]
+    [InlineData("SELECT o.OrderId,\n       |\nFROM dbo.Orders o\nJOIN dbo.Customers c ON c.Id = o.CustomerId", "dbo.Orders o, dbo.Customers c")]
+    [InlineData("SELECT DISTINCT | FROM dbo.Orders", "dbo.Orders")]
+    [InlineData("SELECT TOP 10 | FROM dbo.Orders", "dbo.Orders")]
+    [InlineData("SELECT TOP (10) PERCENT | FROM dbo.Orders", "dbo.Orders")]
+    [InlineData("SELECT DISTINCT TOP (@n) WITH TIES | FROM dbo.Orders ORDER BY 1", "dbo.Orders")]
+    [InlineData("SELECT ISNULL(a, 0), COUNT(*), | FROM dbo.Orders", "dbo.Orders")]
+    [InlineData("SELECT CASE WHEN a = 1 THEN 'x' END, | FROM dbo.Orders", "dbo.Orders")]
+    [InlineData("SELECT | INTO #copy FROM dbo.Orders", "dbo.Orders")]
+    [InlineData("INSERT INTO dbo.Archive (a) SELECT | FROM dbo.Orders WHERE 1 = 1", "dbo.Orders")]
+    [InlineData("SELECT * FROM dbo.Lines WHERE Id IN (SELECT | FROM dbo.Orders)", "dbo.Orders")]
+    [InlineData("WITH c AS (SELECT | FROM dbo.Orders) SELECT * FROM c", "dbo.Orders")]
+    public void Columns_InSelectListWithFrom(string text, string tables)
+    {
+        var context = Analyze(text)!;
+        Assert.Equal(CompletionKind.Columns, context.Kind);
+        Assert.False(context.AfterQualifier);
+        Assert.Equal(tables, Tables(context));
+    }
+
+    [Theory]
+    [InlineData("SELECT |")]
+    [InlineData("SELECT a, |")]
+    [InlineData("SELECT |\nSELECT * FROM dbo.Orders")]
+    [InlineData("SELECT | FROM #temp")]
+    [InlineData("SELECT | FROM (SELECT 1 AS a) d")]
+    [InlineData("SELECT ISNULL(a, | FROM dbo.Orders")]
+    [InlineData("SELECT @| FROM dbo.Orders")]
+    [InlineData("SELECT a | FROM dbo.Orders")]
+    [InlineData("SELECT a = | FROM dbo.Orders")]
+    [InlineData("SELECT * FROM dbo.Orders WHERE a IN (1, | FROM dbo.Lines")]
+    [InlineData("DECLARE @a int, | SELECT * FROM dbo.Orders")]
+    public void NoColumns_InSelectList(string text)
+    {
+        Assert.NotEqual(CompletionKind.Columns, Analyze(text)?.Kind);
+    }
+
+    [Theory]
     [InlineData("TRUNCATE TABLE |", 15)]
     [InlineData("TRUNCATE TABLE dbo.Or|", 15)]
     [InlineData("DROP TABLE |", 11)]
@@ -181,7 +221,7 @@ public class CompletionContextAnalyzerTests
     [InlineData("MERGE dbo.Orders t USING |", 25)]
     public void Objects_AfterTableStatements(string text, int replaceStart)
     {
-        Assert.Equal(CompletionContext.Of(CompletionKind.Objects, replaceStart), Analyze(text.Replace("\\n", "\n")));
+        Assert.Equal(CompletionContext.Of(CompletionKind.Objects, replaceStart), Analyze(text));
     }
 
     [Theory]

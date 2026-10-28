@@ -18,7 +18,7 @@ public enum CompletionKind
 
     /// <summary>
     /// Columns of <see cref="CompletionContext.Tables"/>: after UPDATE ... SET, in WHERE and HAVING, in ORDER BY and
-    /// GROUP BY lists, after "alias.".
+    /// GROUP BY lists, in a SELECT list followed by FROM, after "alias".
     /// </summary>
     Columns,
 
@@ -70,6 +70,14 @@ public static class CompletionContextAnalyzer
     {
         "SELECT", "INSERT", "UPDATE", "DELETE", "MERGE", "DECLARE", "IF", "WHILE", "BEGIN", "END", "ELSE",
         "EXEC", "EXECUTE", "PRINT", "RETURN", "CREATE", "ALTER", "DROP", "TRUNCATE", "WITH",
+    };
+
+    // Words that end a SELECT list when scanning back from a comma: the comma is not in that list.
+    private static readonly ISet<string> SelectListStopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "FROM", "WHERE", "HAVING", "BY", "SET", "VALUES", "ON", "JOIN", "INTO", "UNION", "EXCEPT", "INTERSECT",
+        "INSERT", "UPDATE", "DELETE", "MERGE", "DECLARE", "IF", "WHILE", "BEGIN", "ELSE", "EXEC", "EXECUTE", "PRINT",
+        "RETURN", "CREATE", "ALTER", "DROP", "TRUNCATE", "OUTPUT",
     };
 
     // Clause words: AND / OR belong to the nearest one before them.
@@ -206,7 +214,116 @@ public static class CompletionContextAnalyzer
             return new CompletionContext(CompletionKind.Columns, replaceStart, onTables);
         }
 
+        // "SELECT @|": variables stay with SSMS's list.
+        var typedVariable = first <= before && tokens[first].Kind == SqlTokenKind.Variable;
+        if (!typedVariable && SelectListTables(text, tokens, anchor) is { Count: > 0 } selectTables)
+        {
+            return new CompletionContext(CompletionKind.Columns, replaceStart, selectTables);
+        }
+
         return null;
+    }
+
+    /// <summary>
+    /// "SELECT |", "SELECT DISTINCT TOP (10) |", "SELECT a, |" (SSM-68): the tables of the FROM later in the same
+    /// query. Without a FROM, or inside a function call ("ISNULL(a, |"), null: SSMS's list stays.
+    /// </summary>
+    private static List<TableReference>? SelectListTables(string text, IReadOnlyList<SqlToken> tokens, int anchor)
+    {
+        var select = SelectOfList(tokens, anchor);
+        if (select < 0)
+        {
+            return null;
+        }
+
+        var tables = new List<TableReference>();
+        foreach (var source in TableSources.Collect(tokens, anchor + 1, StatementEnd(text, tokens, anchor + 1)))
+        {
+            tables.Add(source.Reference);
+        }
+
+        tables.RemoveAll(t => t.IsDerived || t.Name.StartsWith("#", StringComparison.Ordinal) || t.Name.Length == 0);
+        return tables;
+    }
+
+    /// <summary>The SELECT whose list the anchor starts or continues, or -1.</summary>
+    private static int SelectOfList(IReadOnlyList<SqlToken> tokens, int anchor)
+    {
+        var a = tokens[anchor];
+        if (a.IsPunctuation(','))
+        {
+            var depth = 0;
+            for (var k = anchor - 1; k >= 0; k--)
+            {
+                var t = tokens[k];
+                if (t.IsPunctuation(')'))
+                {
+                    depth++;
+                }
+                else if (t.IsPunctuation('('))
+                {
+                    if (depth == 0)
+                    {
+                        return -1; // inside a function call or a subquery's own list
+                    }
+
+                    depth--;
+                }
+                else if (depth == 0)
+                {
+                    if (t.IsWord("SELECT"))
+                    {
+                        return k;
+                    }
+
+                    if (t.IsPunctuation(';') || (t.Kind == SqlTokenKind.Word && SelectListStopWords.Contains(t.Text)))
+                    {
+                        return -1;
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        // SELECT [ALL | DISTINCT] [TOP n | TOP (n) [PERCENT] [WITH TIES]] |
+        var i = anchor;
+        if (tokens[i].IsWord("TIES") && i >= 1 && tokens[i - 1].IsWord("WITH"))
+        {
+            i -= 2;
+        }
+
+        if (i >= 0 && tokens[i].IsWord("PERCENT"))
+        {
+            i--;
+        }
+
+        if (i >= 1 && tokens[i].IsPunctuation(')'))
+        {
+            var close = i;
+            while (i >= 0 && !tokens[i].IsPunctuation('('))
+            {
+                i--;
+            }
+
+            if (i < 1 || !tokens[i - 1].IsWord("TOP") || close - i > 4)
+            {
+                return -1;
+            }
+
+            i -= 2;
+        }
+        else if (i >= 1 && (tokens[i].Kind == SqlTokenKind.Number || tokens[i].Kind == SqlTokenKind.Variable) && tokens[i - 1].IsWord("TOP"))
+        {
+            i -= 2;
+        }
+
+        if (i >= 0 && (tokens[i].IsWord("DISTINCT") || tokens[i].IsWord("ALL")))
+        {
+            i--;
+        }
+
+        return i >= 0 && tokens[i].IsWord("SELECT") ? i : -1;
     }
 
     /// <summary>

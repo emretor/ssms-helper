@@ -187,6 +187,8 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   `CompletionKind.SortOrder` (DESC / ASC) after an ORDER BY item (`EndsOrderByItem`). Its items carry
   `OptionalProperty`, and the item manager soft-selects them until something is typed, so Enter stays a new line
   (soft selection: only Tab commits). Object lists also after TRUNCATE / DROP / ALTER TABLE, MERGE, USING in a MERGE.
+- SSM-68: columns in a SELECT list (`SelectListTables`: after SELECT [DISTINCT] [TOP ...] or a depth-0 comma of the
+  list) only when `TableSources.Collect` finds FROM tables up to `StatementEnd`; otherwise SSMS's list.
 - The applicable span runs from `ReplaceStart` to `ReplaceEnd`. For Objects/Procedures `ReplaceEnd(wholeName: true)`
   goes over every following `.part` / `[part]`, so a pick replaces the whole qualified name (SSM-64:
   "JOIN |dbo.Orders" gave dbo.Orders.Orders). `SqlCompletionItemManager` filters by the span up to the caret only.
