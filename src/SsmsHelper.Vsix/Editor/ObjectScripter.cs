@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using EnvDTE;
@@ -11,6 +13,7 @@ using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Threading;
 using SsmsHelper.Connections;
 using SsmsHelper.Core.Scripting;
 using Task = System.Threading.Tasks.Task;
@@ -20,7 +23,8 @@ namespace SsmsHelper.Editor;
 /// <summary>
 /// F12: opens the object under the caret in a new query window on the same database. Procedures, views,
 /// functions and triggers as ALTER (from sys.sql_modules), tables as CREATE (SMO, like Script Table as > CREATE).
-/// One query, plus SMO for tables, in the background; nothing runs while typing.
+/// One query, plus SMO for tables, in the background; nothing runs while typing. Each step is timed (SSM-70): the
+/// status bar message and the activity log show where the time went.
 /// </summary>
 internal static class ObjectScripter
 {
@@ -68,16 +72,21 @@ WHERE o.object_id = OBJECT_ID(@name);";
         }
 
         StatusBar.Show($"scripting {reference.Text}...");
-        Background.Run(() => ScriptAsync(reference, connection, uiConnection.Copy(), newLine), "Scripting object");
+        var timings = new Timings();
+        Background.Run(() => ScriptAsync(reference, connection, uiConnection.Copy(), newLine, timings), "Scripting object");
     }
 
-    private static async Task ScriptAsync(ObjectReference reference, ActiveConnection connection, UIConnectionInfo uiConnection, string newLine)
+    // What the lookup decided: how to get the script (for a table, SMO, run in the background while the window opens),
+    // the message for success, and the one for SMO not finding the table. No Script: nothing to open, Message says why.
+    private sealed record Plan(Func<string?>? Script, string Message, string? NotFoundBySmo = null);
+
+    private static async Task ScriptAsync(ObjectReference reference, ActiveConnection connection, UIConnectionInfo uiConnection, string newLine, Timings timings)
     {
-        string? script = null;
         string message;
         try
         {
-            (script, message) = await Task.Run(() => BuildScriptAsync(reference, connection, newLine));
+            var plan = await Task.Run(() => PlanAsync(reference, connection, newLine, timings));
+            message = plan.Script is null ? plan.Message : await OpenAsync(plan, uiConnection, connection.Key.Database, timings);
         }
         catch (Exception ex)
         {
@@ -86,51 +95,114 @@ WHERE o.object_id = OBJECT_ID(@name);";
         }
 
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (script is not null)
-        {
-            Open(script, uiConnection, connection.Key.Database);
-        }
-
-        StatusBar.Show(message);
+        Log.Info($"F12 {reference.Text}: {timings}");
+        StatusBar.Show($"{message} ({timings})");
     }
 
-    private static async Task<(string? Script, string Message)> BuildScriptAsync(ObjectReference reference, ActiveConnection connection, string newLine)
+    private static async Task<Plan> PlanAsync(ObjectReference reference, ActiveConnection connection, string newLine, Timings timings)
     {
-        using var db = connection.CreateConnection();
-        await db.OpenAsync().ConfigureAwait(false);
-
-        // "OtherDb.dbo.Proc" on a connection without a database in its settings: OBJECT_ID would look in the login's
-        // default database, so compare with where the lookup actually runs.
-        if (reference.Database is not null && !string.Equals(reference.Database, db.Database, StringComparison.OrdinalIgnoreCase))
+        var db = connection.CreateConnection();
+        try
         {
-            return (null, $"{reference.Text} is in another database; switch the window to {reference.Database} first.");
-        }
+            await db.OpenAsync().ConfigureAwait(false);
+            timings.Step("connect");
 
-        var found = await LookupAsync(db, reference).ConfigureAwait(false);
-        if (found is null)
-        {
-            return (null, $"{reference.Text} is not a table, view, procedure, function or trigger in this database.");
-        }
-
-        var fullName = $"{found.Schema}.{found.Name}";
-        if (found.Type == "U")
-        {
-            return ScriptTable(db, found, newLine) is { } tableScript
-                ? (tableScript, $"CREATE script for {fullName}.")
-                : (null, $"{fullName} was not found by SMO; refresh Object Explorer and try again.");
-        }
-
-        if (found.Type is "P" or "V" or "FN" or "IF" or "TF" or "TR")
-        {
-            if (found.Definition is null)
+            // "OtherDb.dbo.Proc" on a connection without a database in its settings: OBJECT_ID would look in the login's
+            // default database, so compare with where the lookup actually runs.
+            if (reference.Database is not null && !string.Equals(reference.Database, db.Database, StringComparison.OrdinalIgnoreCase))
             {
-                return (null, $"{fullName} is encrypted or you lack VIEW DEFINITION; it cannot be scripted.");
+                return new Plan(null, $"{reference.Text} is in another database; switch the window to {reference.Database} first.");
             }
 
-            return (ObjectScript.Alter(found.Database, found.Definition, found.AnsiNulls, found.QuotedIdentifier, newLine), $"ALTER script for {fullName}.");
+            var found = await LookupAsync(db, reference).ConfigureAwait(false);
+            timings.Step("lookup");
+            if (found is null)
+            {
+                return new Plan(null, $"{reference.Text} is not a table, view, procedure, function or trigger in this database.");
+            }
+
+            var fullName = $"{found.Schema}.{found.Name}";
+            if (found.Type == "U")
+            {
+                // SMO takes over the connection and disposes it; OpenAsync always runs it.
+                var smoConnection = db;
+                db = null;
+                string? Script()
+                {
+                    using (smoConnection)
+                    {
+                        var watch = Stopwatch.StartNew();
+                        var tableScript = ScriptTable(smoConnection, found, newLine);
+                        timings.Add("SMO", watch);
+                        return tableScript;
+                    }
+                }
+
+                return new Plan(Script, $"CREATE script for {fullName}.", $"{fullName} was not found by SMO; refresh Object Explorer and try again.");
+            }
+
+            if (found.Type is "P" or "V" or "FN" or "IF" or "TF" or "TR")
+            {
+                if (found.Definition is null)
+                {
+                    return new Plan(null, $"{fullName} is encrypted or you lack VIEW DEFINITION; it cannot be scripted.");
+                }
+
+                var script = ObjectScript.Alter(found.Database, found.Definition, found.AnsiNulls, found.QuotedIdentifier, newLine);
+                return new Plan(() => script, $"ALTER script for {fullName}.");
+            }
+
+            return new Plan(null, $"{fullName} is a {Describe(found.Type)}; only tables, views, procedures, functions and triggers are scripted.");
+        }
+        finally
+        {
+            db?.Dispose();
+        }
+    }
+
+    // The new window opens (SSMS connects it, the slowest step) while SMO is still scripting a table, so F12 takes the
+    // longer of the two instead of both. If SMO then fails, the empty window is closed again.
+    private static async Task<string> OpenAsync(Plan plan, UIConnectionInfo uiConnection, string database, Timings timings)
+    {
+        var scripting = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await TaskScheduler.Default;
+            return plan.Script!();
+        });
+
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var watch = Stopwatch.StartNew();
+        var document = OpenWindow(uiConnection, database);
+        timings.Add("window", watch);
+
+        string? script;
+        try
+        {
+            script = await scripting;
+        }
+        catch
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            document?.Close(vsSaveChanges.vsSaveChangesNo);
+            throw;
         }
 
-        return (null, $"{fullName} is a {Describe(found.Type)}; only tables, views, procedures, functions and triggers are scripted.");
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        if (script is null)
+        {
+            document?.Close(vsSaveChanges.vsSaveChangesNo);
+            return plan.NotFoundBySmo!;
+        }
+
+        watch.Restart();
+        if (document?.Object("TextDocument") is TextDocument text)
+        {
+            text.StartPoint.CreateEditPoint().Insert(script);
+            text.Selection.MoveToPoint(text.StartPoint);
+        }
+
+        timings.Add("insert", watch);
+        return plan.Message;
     }
 
     private static async Task<Found?> LookupAsync(DbConnection db, ObjectReference reference)
@@ -183,7 +255,8 @@ WHERE o.object_id = OBJECT_ID(@name);";
         return ObjectScript.Create(found.Database, table.Script(options).Cast<string>(), newLine);
     }
 
-    private static void Open(string script, UIConnectionInfo uiConnection, string database)
+    // Kept as a Document so the script goes into this window even if the user switches windows while SMO finishes.
+    private static Document? OpenWindow(UIConnectionInfo uiConnection, string database)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (database.Length > 0)
@@ -192,12 +265,41 @@ WHERE o.object_id = OBJECT_ID(@name);";
         }
 
         ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, uiConnection, null);
-        if (ServiceProvider.GlobalProvider.GetService(typeof(DTE)) is DTE { ActiveDocument: { } document } &&
-            document.Object("TextDocument") is TextDocument text)
+        return ServiceProvider.GlobalProvider.GetService(typeof(DTE)) is DTE dte ? dte.ActiveDocument : null;
+    }
+
+    // "1.0 s: connect 20 ms, lookup 5 ms, window 800 ms, SMO 180 ms, insert 10 ms". SMO runs while the window opens.
+    private sealed class Timings
+    {
+        private readonly Stopwatch _total = Stopwatch.StartNew();
+        private readonly Stopwatch _step = Stopwatch.StartNew();
+        private readonly List<string> _steps = new();
+
+        // A step in sequence: the time since the previous one.
+        public void Step(string name)
         {
-            var start = text.StartPoint.CreateEditPoint();
-            start.Insert(script);
-            text.Selection.MoveToPoint(text.StartPoint);
+            lock (_steps)
+            {
+                _steps.Add($"{name} {_step.ElapsedMilliseconds} ms");
+                _step.Restart();
+            }
+        }
+
+        // A step timed on its own (it may overlap others).
+        public void Add(string name, Stopwatch watch)
+        {
+            lock (_steps)
+            {
+                _steps.Add($"{name} {watch.ElapsedMilliseconds} ms");
+            }
+        }
+
+        public override string ToString()
+        {
+            lock (_steps)
+            {
+                return $"{_total.Elapsed.TotalSeconds:0.0} s: {string.Join(", ", _steps)}";
+            }
         }
     }
 
