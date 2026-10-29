@@ -642,6 +642,9 @@ All messages start with `SSMS Helper:`.
 
 - Nothing happens: check the helper is on under [Options](#options), the window is connected and the database dropdown shows the right database; run
   Refresh Schema.
+- SSMS 22 got the SSMS 21 package (`SsmsHelper.Ssms21.vsix` installed with SSMS 22 ticked): features do not work,
+  and `SsmsHelper.vsix` says "already installed". Uninstall SSMS Helper from SSMS 22 (Tools > SSMS Helper >
+  Uninstall, or Extensions > Manage Extensions), restart and close SSMS, then install `SsmsHelper.vsix`.
 - To see what the extension logs, start SSMS with `Ssms.exe /log`, reproduce the problem, close SSMS and look for
   `SsmsHelper` in `%AppData%\Microsoft\SSMS\22.0_<id>\ActivityLog.xml`.
 - Still stuck: open an [issue](https://github.com/emretor/ssms-helper/issues) with the SSMS and extension versions
