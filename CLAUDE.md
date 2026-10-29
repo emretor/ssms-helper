@@ -239,6 +239,10 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   `Table.Script(ScriptingOptions)` for tables (SMO + Sfc referenced compile-only from SSMS). Opens with
   `ScriptFactory.CreateNewBlankScript(ScriptType.Sql, uiConnection copy with AdvancedOptions["DATABASE"], null)`
   and inserts through `DTE.ActiveDocument` TextDocument.
+- SSM-70: F12 times each step (status bar and activity log). Measured in SSMS: the window (CreateNewBlankScript,
+  SSMS connects it) about 0.8 s; SMO table scripting about 1.9 s on the first use per session (loading and JIT),
+  then about 0.2 s (36 queries, one reads all of sys.tables). For tables the window opens while SMO runs; if SMO
+  then fails, the empty window is closed.
 - F12 is a vsct KeyBinding (global scope) on `Tools.SSMSHelperScriptObject`; the command filter also maps VSStd97
   GotoDefn (Edit.GoToDefinition) to the same action in case SSMS's scheme binds F12 to that.
 
