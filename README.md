@@ -37,11 +37,12 @@ messages and limitations.**
 2. Close SSMS and double-click the file. The VSIX Installer lists your SSMS version as a target.
    If the installer does not open, right-click the file and choose
    **Open with > Microsoft Visual Studio Version Selector**.
+   **`SsmsHelper.Ssms21.vsix`: tick SSMS 21 only.** Its installer also offers SSMS 22 (SSMS 22 accepts packages
+   made for SSMS 21), but the SSMS 21 build does not work there.
 3. Start SSMS and open **Tools > SSMS Helper > About**.
 
-With both SSMS 22 and 21 installed, install `SsmsHelper.vsix` first. SSMS 22 also accepts packages made for SSMS
-21, so the SSMS 21 package offers SSMS 22 as a target too; the SSMS 21 build cannot load there. Installing the SSMS
-22 package first takes SSMS 22 out of that list (otherwise untick it).
+With both SSMS 22 and 21 installed, install `SsmsHelper.vsix` first: SSMS 22 then already has that version and the
+SSMS 21 installer no longer offers it.
 
 The extension is installed per user under
 `%LocalAppData%\Microsoft\SSMS\22.0_<id>\Extensions\<random folder>` (`21.0_<id>` for SSMS 21).
