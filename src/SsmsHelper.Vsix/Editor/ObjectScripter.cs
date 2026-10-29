@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using EnvDTE;
@@ -20,7 +22,8 @@ namespace SsmsHelper.Editor;
 /// <summary>
 /// F12: opens the object under the caret in a new query window on the same database. Procedures, views,
 /// functions and triggers as ALTER (from sys.sql_modules), tables as CREATE (SMO, like Script Table as > CREATE).
-/// One query, plus SMO for tables, in the background; nothing runs while typing.
+/// One query, plus SMO for tables, in the background; nothing runs while typing. Each step is timed (SSM-70): the
+/// status bar message and the activity log show where the time went.
 /// </summary>
 internal static class ObjectScripter
 {
@@ -68,16 +71,17 @@ WHERE o.object_id = OBJECT_ID(@name);";
         }
 
         StatusBar.Show($"scripting {reference.Text}...");
-        Background.Run(() => ScriptAsync(reference, connection, uiConnection.Copy(), newLine), "Scripting object");
+        var timings = new Timings();
+        Background.Run(() => ScriptAsync(reference, connection, uiConnection.Copy(), newLine, timings), "Scripting object");
     }
 
-    private static async Task ScriptAsync(ObjectReference reference, ActiveConnection connection, UIConnectionInfo uiConnection, string newLine)
+    private static async Task ScriptAsync(ObjectReference reference, ActiveConnection connection, UIConnectionInfo uiConnection, string newLine, Timings timings)
     {
         string? script = null;
         string message;
         try
         {
-            (script, message) = await Task.Run(() => BuildScriptAsync(reference, connection, newLine));
+            (script, message) = await Task.Run(() => BuildScriptAsync(reference, connection, newLine, timings));
         }
         catch (Exception ex)
         {
@@ -86,18 +90,22 @@ WHERE o.object_id = OBJECT_ID(@name);";
         }
 
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        timings.Step("UI thread");
         if (script is not null)
         {
             Open(script, uiConnection, connection.Key.Database);
+            timings.Step("window");
         }
 
-        StatusBar.Show(message);
+        Log.Info($"F12 {reference.Text}: {timings}");
+        StatusBar.Show($"{message} ({timings})");
     }
 
-    private static async Task<(string? Script, string Message)> BuildScriptAsync(ObjectReference reference, ActiveConnection connection, string newLine)
+    private static async Task<(string? Script, string Message)> BuildScriptAsync(ObjectReference reference, ActiveConnection connection, string newLine, Timings timings)
     {
         using var db = connection.CreateConnection();
         await db.OpenAsync().ConfigureAwait(false);
+        timings.Step("connect");
 
         // "OtherDb.dbo.Proc" on a connection without a database in its settings: OBJECT_ID would look in the login's
         // default database, so compare with where the lookup actually runs.
@@ -107,6 +115,7 @@ WHERE o.object_id = OBJECT_ID(@name);";
         }
 
         var found = await LookupAsync(db, reference).ConfigureAwait(false);
+        timings.Step("lookup");
         if (found is null)
         {
             return (null, $"{reference.Text} is not a table, view, procedure, function or trigger in this database.");
@@ -115,7 +124,9 @@ WHERE o.object_id = OBJECT_ID(@name);";
         var fullName = $"{found.Schema}.{found.Name}";
         if (found.Type == "U")
         {
-            return ScriptTable(db, found, newLine) is { } tableScript
+            var tableScript = ScriptTable(db, found, newLine);
+            timings.Step("SMO");
+            return tableScript is not null
                 ? (tableScript, $"CREATE script for {fullName}.")
                 : (null, $"{fullName} was not found by SMO; refresh Object Explorer and try again.");
         }
@@ -198,6 +209,31 @@ WHERE o.object_id = OBJECT_ID(@name);";
             var start = text.StartPoint.CreateEditPoint();
             start.Insert(script);
             text.Selection.MoveToPoint(text.StartPoint);
+        }
+    }
+
+    // "1.4 s: connect 20 ms, lookup 5 ms, SMO 1200 ms, UI thread 3 ms, window 180 ms".
+    private sealed class Timings
+    {
+        private readonly Stopwatch _total = Stopwatch.StartNew();
+        private readonly Stopwatch _step = Stopwatch.StartNew();
+        private readonly List<string> _steps = new();
+
+        public void Step(string name)
+        {
+            lock (_steps)
+            {
+                _steps.Add($"{name} {_step.ElapsedMilliseconds} ms");
+                _step.Restart();
+            }
+        }
+
+        public override string ToString()
+        {
+            lock (_steps)
+            {
+                return $"{_total.Elapsed.TotalSeconds:0.0} s: {string.Join(", ", _steps)}";
+            }
         }
     }
 

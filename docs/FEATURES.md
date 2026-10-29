@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.27, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.28, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -428,7 +428,8 @@ Nothing is executed; edit and run the script yourself. Details:
 - Also on the menu as **Tools > SSMS Helper > Script Object** (keyboard name `Tools.SSMSHelperScriptObject`); rebind
   it under Tools > Options > Environment > Keyboard. Turn it off under [Options](#options).
 - Cost: one small query per F12, plus SMO for tables (about half a second the first time, then faster). Nothing
-  runs while you type.
+  runs while you type. The status bar message ends with the time each step took (connect, lookup, SMO for tables,
+  opening the window); the activity log has the same line.
 
 ## Copy as INSERT
 
@@ -613,7 +614,7 @@ All messages start with `SSMS Helper:`.
 | `<n> parameter(s) of <procedure>.` | EXEC helper done |
 | `<name> is not a stored procedure in <db>.` | EXEC helper: unknown procedure |
 | `scripting <name>...` | F12 is looking up the object |
-| `ALTER script for <name>.` / `CREATE script for <name>.` | F12 opened the script |
+| `ALTER script for <name>. (0.3 s: connect ..., lookup ..., window ...)` / `CREATE script for <name>. (...)` | F12 opened the script; the times show where it was slow |
 | `<name> is not a table, view, procedure, function or trigger in this database.` | F12: nothing with that name |
 | `<name> is encrypted or you lack VIEW DEFINITION; ...` | F12: no source available |
 | `<name> is in another database; switch the window to <db> first.` | F12 on `OtherDb.dbo.x` |
