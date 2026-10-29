@@ -41,9 +41,10 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
 
     public Task<ImmutableArray<CompletionItem>> SortCompletionListAsync(IAsyncCompletionSession session, AsyncCompletionSessionInitialDataSnapshot data, CancellationToken token)
     {
-        // The source already orders the items: tables, views, functions; columns by table.
+        // The source already orders the items: tables, views, functions; columns by table. The "No suggestions" line
+        // comes last and is never matched.
         var initial = data.InitialItemList;
-        var candidates = new CompletionCandidate[initial.Count];
+        var candidates = new CompletionCandidate[RealCount(initial)];
         for (var i = 0; i < candidates.Length; i++)
         {
             var item = initial[i];
@@ -59,10 +60,11 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
     public Task<FilteredCompletionModel?> UpdateCompletionListAsync(IAsyncCompletionSession session, AsyncCompletionSessionDataSnapshot data, CancellationToken token)
     {
         var items = data.InitialSortedItemList;
-        if (!session.Properties.TryGetProperty(CandidatesProperty, out CompletionCandidate[] candidates) || candidates.Length != items.Count)
+        var realCount = RealCount(items);
+        if (!session.Properties.TryGetProperty(CandidatesProperty, out CompletionCandidate[] candidates) || candidates.Length != realCount)
         {
-            candidates = new CompletionCandidate[items.Count];
-            for (var i = 0; i < items.Count; i++)
+            candidates = new CompletionCandidate[realCount];
+            for (var i = 0; i < realCount; i++)
             {
                 candidates[i] = new CompletionCandidate(items[i].FilterText, 0);
             }
@@ -87,6 +89,16 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
         }
 
         var matches = CompletionMatcher.Filter(candidates, typed);
+        if (matches.Count == 0 && realCount < items.Count &&
+            data.Trigger.Reason is CompletionTriggerReason.Invoke or CompletionTriggerReason.InvokeAndCommitIfUnique)
+        {
+            // Ctrl+Space / Ctrl+J and nothing matches (SSM-53): say so instead of showing nothing. Typing on closes it
+            // (the next update is not an invoke). Soft-selected, so Enter closes it without picking.
+            return Task.FromResult<FilteredCompletionModel?>(new FilteredCompletionModel(
+                ImmutableArray.Create(new CompletionItemWithHighlight(items[items.Count - 1])), 0,
+                ImmutableArray<CompletionFilterWithState>.Empty, UpdateSelectionHint.SoftSelected, centerSelection: false, uniqueItem: null));
+        }
+
         if (matches.Count == 0)
         {
             // "SELECT * FROM dbo.Nope": nothing left to offer, so the list goes away instead of showing unrelated names.
@@ -120,6 +132,10 @@ internal sealed class SqlCompletionItemManager : IAsyncCompletionItemManager
             shown.MoveToImmutable(), 0, ImmutableArray<CompletionFilterWithState>.Empty,
             soft ? UpdateSelectionHint.SoftSelected : UpdateSelectionHint.Selected, centerSelection: true, uniqueItem: null));
     }
+
+    // Items other than the "No suggestions" line, which the source puts last.
+    private static int RealCount(IReadOnlyList<CompletionItem> items) =>
+        items.Count > 0 && items[items.Count - 1].Properties.ContainsProperty(SqlCompletionSource.PlaceholderProperty) ? items.Count - 1 : items.Count;
 
     /// <summary>
     /// The filter text: the span up to the caret. A pick replaces the whole name around the caret (SSM-64), but only

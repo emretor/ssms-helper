@@ -199,6 +199,10 @@ The editor must stay as fast as SSMS without the extension. Every change to edit
   a SELECT item. `SoftSelect` where the word may be an alias (and then at least 2 letters); the item manager also
   soft-selects a keyword typed in full, so Enter stays a new line. Needs no connection or schema. Setting
   `ClauseKeywords`. Measured 0.08 ms per key for the whole analyzer on a full window.
+- SSM-53: every non-empty list gets a "No suggestions" item last (`PlaceholderProperty`, InsertText = the span's own
+  text). The item manager never matches it; it shows it alone, soft-selected, only when nothing matches and the
+  update's trigger is Invoke / InvokeAndCommitIfUnique (Ctrl+J / Ctrl+Space). `SqlCompletionCommitManager` handles
+  only that item: `RaiseFurtherReturnKeyAndTabKeyCommandHandlers`, so Enter / Tab keep their normal meaning.
 - The applicable span runs from `ReplaceStart` to `ReplaceEnd`. For Objects/Procedures `ReplaceEnd(wholeName: true)`
   goes over every following `.part` / `[part]`, so a pick replaces the whole qualified name (SSM-64:
   "JOIN |dbo.Orders" gave dbo.Orders.Orders). `SqlCompletionItemManager` filters by the span up to the caret only.

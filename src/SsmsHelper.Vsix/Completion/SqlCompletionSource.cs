@@ -68,6 +68,14 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
 
     internal const string SoftProperty = "SsmsHelper.Soft";
 
+    /// <summary>
+    /// The "No suggestions" line (SSM-53), last in every list and never matched. Shown only when Ctrl+Space / Ctrl+J
+    /// finds nothing; picking it closes the list and changes nothing.
+    /// </summary>
+    internal const string PlaceholderProperty = "SsmsHelper.Placeholder";
+
+    internal const string PlaceholderText = "No suggestions";
+
     private static readonly ImageElement TableIcon = new(KnownMonikers.Table.ToImageId(), "Table");
     private static readonly ImageElement ViewIcon = new(KnownMonikers.View.ToImageId(), "View");
     private static readonly ImageElement FunctionIcon = new(KnownMonikers.MethodPublic.ToImageId(), "Function");
@@ -194,6 +202,26 @@ internal sealed class SqlCompletionSource : IAsyncCompletionSource
 
     public async Task<CompletionContext> GetCompletionContextAsync(IAsyncCompletionSession session, CompletionTrigger trigger,
         SnapshotPoint triggerLocation, SnapshotSpan applicableToSpan, CancellationToken token)
+    {
+        var result = await ItemsAsync(token).ConfigureAwait(false);
+        var items = result.ItemList;
+        return items is null || items.Count == 0 ? result : new CompletionContext(items.Append(Placeholder(applicableToSpan)).ToImmutableArray());
+    }
+
+    /// <summary>
+    /// "No suggestions": written over the list's span with that span's own text, so even a plain commit changes nothing.
+    /// Any typing closes a list that shows it, so the span cannot change underneath it.
+    /// </summary>
+    private CompletionItem Placeholder(SnapshotSpan applicableToSpan)
+    {
+        var text = applicableToSpan.GetText();
+        var item = new CompletionItem(PlaceholderText, this, new ImageElement(KnownMonikers.StatusInformation.ToImageId(), "Information"),
+            ImmutableArray<CompletionFilter>.Empty, string.Empty, text, PlaceholderText, text, ImmutableArray<ImageElement>.Empty);
+        item.Properties.AddProperty(PlaceholderProperty, true);
+        return item;
+    }
+
+    private async Task<CompletionContext> ItemsAsync(CancellationToken token)
     {
         var context = _context;
         var key = _key;

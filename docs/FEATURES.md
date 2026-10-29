@@ -1,6 +1,6 @@
 # SSMS Helper features
 
-What every feature does, how to trigger it, and what to expect. Version 0.13.26, SSMS 22 (SSMS 21: separate
+What every feature does, how to trigger it, and what to expect. Version 0.13.27, SSMS 22 (SSMS 21: separate
 package `SsmsHelper.Ssms21.vsix`, best effort).
 
 - [Completion list](#completion-list)
@@ -87,7 +87,9 @@ Enter at the end of a line is still a new line):
   `JOIN dbo.Customers o` (also `[dbo].[Orders]`, `Shop.dbo.Orders`, `Shop..Orders`).
 - **Only the text left of the caret filters**: with the caret at the start of a name the list shows everything;
   in `dbo.Or|ders` it filters by `dbo.Or`.
-- **The list closes** as soon as nothing matches what you typed.
+- **The list closes** as soon as nothing matches what you typed. **Ctrl+Space** or **Ctrl+J** there shows a single
+  **No suggestions** line instead of nothing (`SELECT * FROM dbo.Nope`, Ctrl+Space). Enter, Tab or Esc closes it and
+  changes nothing (Enter still starts a new line, Tab still indents); typing on closes it too.
 - **In the SELECT list, WHERE, HAVING, ORDER BY and GROUP BY** columns are inserted with the table's alias (`o.OrderId`). With several tables and no
   alias, the table name is used (`Orders.OrderId`); one table without an alias gives just `OrderId`. After
   `UPDATE ... SET` and after `o.` names go in without a prefix.
